@@ -1,0 +1,1567 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="Cache-Control" content="no-store">
+  <title>Absensi & Proses Belajar Anak</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+  <style>
+    body { font-family: 'Segoe UI', system-ui, sans-serif; }
+    .card { transition: all 0.2s; }
+    .card:hover { transform: translateY(-2px); }
+    .preview-img { max-height: 120px; object-fit: cover; border-radius: 8px; }
+  
+/* ===== RAPORT SISWA ===== */
+.raport-card{background:#fff;border:1px solid #e5e7eb;border-radius:16px;box-shadow:0 2px 8px rgba(15,23,42,.05);padding:20px;margin-top:16px}
+.raport-head{display:flex;justify-content:space-between;gap:16px;align-items:flex-start;border-bottom:2px solid #eef2ff;padding-bottom:14px;margin-bottom:14px}
+.raport-title{font-size:18px;font-weight:700;color:#111827}.raport-sub{font-size:12px;color:#6b7280;margin-top:3px}
+.raport-identitas{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin-bottom:14px}
+.raport-identitas div{background:#f8fafc;border-radius:10px;padding:9px 11px}.raport-identitas small{display:block;color:#6b7280;font-size:11px}.raport-identitas strong{display:block;color:#111827;font-size:13px;margin-top:2px}
+.raport-table{width:100%;border-collapse:collapse;font-size:12px}.raport-table th{background:#eef2ff;color:#374151;font-weight:700;text-align:left;padding:9px;border:1px solid #e5e7eb}.raport-table td{padding:8px;border:1px solid #e5e7eb}.raport-table .num{text-align:center}.predikat{font-weight:700}.raport-footer{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:14px}.raport-summary{border:1px solid #e5e7eb;border-radius:10px;padding:12px}.raport-summary h4{font-weight:700;margin-bottom:7px}.raport-summary-row{display:flex;justify-content:space-between;padding:4px 0;color:#4b5563;font-size:12px}.raport-empty{padding:14px;text-align:center;color:#9ca3af;border:1px dashed #d1d5db;border-radius:10px}
+@media(max-width:700px){.raport-identitas,.raport-footer{grid-template-columns:1fr}.raport-table{font-size:11px}}
+</style>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+</head>
+<body class="bg-gradient-to-br from-blue-50 to-indigo-100 min-h-screen">
+
+  <!-- LOGIN -->
+  <div id="loginPage" class="min-h-screen flex items-center justify-center p-4">
+    <div class="bg-white rounded-2xl shadow-xl p-8 w-full max-w-md">
+      <div class="text-center mb-8">
+        <div class="w-16 h-16 bg-indigo-600 rounded-full flex items-center justify-center mx-auto mb-4">
+          <i class="fas fa-graduation-cap text-white text-2xl"></i>
+        </div>
+        <h1 class="text-2xl font-bold text-gray-800">Absensi & Belajar</h1>
+        <p class="text-gray-500 mt-1">Sistem Kehadiran & Progress Anak</p>
+      </div>
+      <div class="space-y-4">
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-1">Nama Guru</label>
+          <input id="loginName" type="text" autocomplete="username" placeholder="Masukkan nama guru"
+                 class="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none">
+        </div>
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-1">Password</label>
+          <input id="loginPassword" type="password" autocomplete="current-password" placeholder="Masukkan password"
+                 class="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none">
+        </div>
+        <div id="loginError" aria-live="polite" class="hidden text-sm text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2"></div>
+        <button id="loginButton" type="button" onclick="login()" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-medium py-2.5 rounded-lg transition">
+          Masuk
+        </button>
+      </div>
+      <p class="text-xs text-center text-gray-400 mt-6">Login dilindungi password • sesi server • data tersimpan di MySQL</p>
+    </div>
+  </div>
+
+  <!-- APP -->
+  <div id="app" class="hidden">
+    <nav class="bg-white shadow-sm sticky top-0 z-50">
+      <div class="max-w-6xl mx-auto px-4 py-3 flex items-center justify-between">
+        <div class="flex items-center gap-3">
+          <div class="w-10 h-10 bg-indigo-600 rounded-lg flex items-center justify-center">
+            <i class="fas fa-graduation-cap text-white"></i>
+          </div>
+          <div>
+            <h1 class="font-bold text-gray-800">Absensi & Belajar</h1>
+            <p class="text-xs text-gray-500" id="userInfo"></p>
+          </div>
+        </div>
+        <div class="flex items-center gap-2">
+          <button id="exportButton" onclick="exportPDFReport()" class="text-sm bg-green-50 text-green-700 hover:bg-green-100 px-3 py-1.5 rounded-lg font-medium">
+            <i class="fas fa-file-pdf mr-1"></i> Export PDF
+          </button>
+          <label id="importButton" class="text-sm bg-blue-50 text-blue-700 hover:bg-blue-100 px-3 py-1.5 rounded-lg font-medium cursor-pointer">
+            <i class="fas fa-upload mr-1"></i> Import
+            <input type="file" accept=".json" class="hidden" onchange="importData(event)">
+          </label>
+          <button onclick="logout()" class="text-sm text-red-500 hover:text-red-700 font-medium ml-2">
+            <i class="fas fa-sign-out-alt mr-1"></i> Keluar
+          </button>
+        </div>
+      </div>
+    </nav>
+
+    <div class="bg-white border-b">
+      <div class="max-w-6xl mx-auto px-4 flex gap-1 overflow-x-auto">
+        <button onclick="showTab('dashboard')" class="tab-btn px-4 py-3 text-sm font-medium text-indigo-600 border-b-2 border-indigo-600" data-tab="dashboard">
+          <i class="fas fa-home mr-1"></i> Dashboard
+        </button>
+        <button onclick="showTab('absensi')" class="tab-btn px-4 py-3 text-sm font-medium text-gray-500 hover:text-indigo-600" data-tab="absensi">
+          <i class="fas fa-clipboard-check mr-1"></i> Absensi
+        </button>
+        <button onclick="showTab('belajar')" class="tab-btn px-4 py-3 text-sm font-medium text-gray-500 hover:text-indigo-600" data-tab="belajar">
+          <i class="fas fa-book-open mr-1"></i> Materi
+        </button>
+        <button onclick="showTab('laporan')" class="tab-btn px-4 py-3 text-sm font-medium text-gray-500 hover:text-indigo-600" data-tab="laporan">
+          <i class="fas fa-chart-bar mr-1"></i> Laporan
+        </button>
+        <button onclick="showTab('kelas')" class="tab-btn px-4 py-3 text-sm font-medium text-gray-500 hover:text-indigo-600" data-tab="kelas">
+          <i class="fas fa-chalkboard-teacher mr-1"></i> Kelas
+        </button>
+        <button onclick="showTab('siswa')" class="tab-btn px-4 py-3 text-sm font-medium text-gray-500 hover:text-indigo-600" data-tab="siswa">
+          <i class="fas fa-users mr-1"></i> Siswa
+        </button>
+      </div>
+    </div>
+
+    <main class="max-w-6xl mx-auto px-4 py-6">
+
+      <!-- DASHBOARD -->
+      <div id="tab-dashboard" class="tab-content">
+        <div id="dashboardContent"></div>
+      </div>
+
+      <!-- ABSENSI -->
+      <div id="tab-absensi" class="tab-content hidden">
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
+          <h2 class="text-xl font-bold text-gray-800">Absensi Harian</h2>
+          <div class="flex flex-wrap gap-2">
+            <select id="filterKelasAbsensi" class="px-3 py-2 border rounded-lg text-sm" onchange="renderAbsensi()">
+              <option value="">Semua Kelas</option>
+            </select>
+            <input type="date" id="absensiTanggal" class="px-3 py-2 border rounded-lg text-sm" onchange="renderAbsensi()">
+          </div>
+        </div>
+        <div class="bg-white rounded-xl shadow-sm border overflow-hidden">
+          <div class="overflow-x-auto">
+            <table class="w-full text-sm">
+              <thead class="bg-gray-50 text-gray-600">
+                <tr>
+                  <th class="px-4 py-3 text-left">No</th>
+                  <th class="px-4 py-3 text-left">Nama Siswa</th>
+                  <th class="px-4 py-3 text-left">Kelas</th>
+                  <th class="px-4 py-3 text-center">Status</th>
+                </tr>
+              </thead>
+              <tbody id="absensiBody"></tbody>
+            </table>
+          </div>
+        </div>
+        <p class="text-xs text-gray-400 mt-3">Klik kotak cek untuk memilih status hadir, sakit, izin, atau alpha.</p>
+      </div>
+
+      <!-- MATERI -->
+      <div id="tab-belajar" class="tab-content hidden">
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
+          <h2 class="text-xl font-bold text-gray-800">Materi Pembelajaran</h2>
+          <button onclick="tambahMateri()" class="bg-indigo-600 hover:bg-indigo-700 text-white text-sm px-4 py-2 rounded-lg">
+            <i class="fas fa-plus mr-1"></i> Tambah Materi
+          </button>
+        </div>
+        <div id="materiList" class="space-y-4"></div>
+      </div>
+
+      <!-- LAPORAN -->
+      <div id="tab-laporan" class="tab-content hidden">
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
+          <h2 class="text-xl font-bold text-gray-800">Laporan Bulanan</h2>
+          <div class="flex flex-wrap gap-2">
+            <select id="filterKelasLaporan" class="px-3 py-2 border rounded-lg text-sm" onchange="renderLaporan()">
+              <option value="">Semua Kelas</option>
+            </select>
+            <input type="month" id="laporanBulan" class="px-3 py-2 border rounded-lg text-sm" onchange="renderLaporan()">
+          </div>
+        </div>
+        <div class="bg-white rounded-xl shadow-sm border overflow-hidden">
+          <div class="overflow-x-auto">
+            <table class="w-full text-sm">
+              <thead class="bg-gray-50 text-gray-600">
+                <tr>
+                  <th class="px-4 py-3 text-left">No</th>
+                  <th class="px-4 py-3 text-left">Nama</th>
+                  <th class="px-4 py-3 text-left">Kelas</th>
+                  <th class="px-4 py-3 text-center text-green-600">Hadir</th>
+                  <th class="px-4 py-3 text-center text-yellow-600">Sakit</th>
+                  <th class="px-4 py-3 text-center text-blue-600">Izin</th>
+                  <th class="px-4 py-3 text-center text-red-600">Alpha</th>
+                  <th class="px-4 py-3 text-center">Total</th>
+                  <th class="px-4 py-3 text-center">Kehadiran</th>
+                  <th class="px-4 py-3 text-center">Pencapaian</th>
+                </tr>
+              </thead>
+              <tbody id="laporanBody"></tbody>
+            </table>
+          </div>
+        </div>
+        <p class="text-xs text-gray-400 mt-3" id="laporanInfo"></p>
+        <div id="raportSiswaList"></div>
+      </div>
+
+      <!-- KELAS -->
+      <div id="tab-kelas" class="tab-content hidden">
+        <h2 class="text-xl font-bold text-gray-800 mb-4">Daftar Kelas & Wali Kelas</h2>
+        <div id="kelasList" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4"></div>
+        <p class="text-xs text-gray-400 mt-4">Untuk mengubah nama wali kelas, edit di tab ini (klik tombol Edit).</p>
+      </div>
+
+      <!-- SISWA -->
+      <div id="tab-siswa" class="tab-content hidden">
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
+          <h2 class="text-xl font-bold text-gray-800">Daftar Siswa</h2>
+          <div class="flex flex-wrap gap-2">
+            <select id="filterKelasSiswa" class="px-3 py-2 border rounded-lg text-sm" onchange="renderSiswa()">
+              <option value="">Semua Kelas</option>
+            </select>
+            <button onclick="tambahSiswa()" class="bg-indigo-600 hover:bg-indigo-700 text-white text-sm px-4 py-2 rounded-lg">
+              <i class="fas fa-user-plus mr-1"></i> Tambah Siswa
+            </button>
+          </div>
+        </div>
+        <div class="bg-white rounded-xl shadow-sm border overflow-hidden">
+          <div class="overflow-x-auto">
+            <table class="w-full text-sm">
+              <thead class="bg-gray-50 text-gray-600">
+                <tr>
+                  <th class="px-4 py-3 text-left">No</th>
+                  <th class="px-4 py-3 text-left">Nama</th>
+                  <th class="px-4 py-3 text-left">Kelas</th>
+                  <th class="px-4 py-3 text-left">Orang Tua</th>
+                  <th class="px-4 py-3 text-center">Aksi</th>
+                </tr>
+              </thead>
+              <tbody id="siswaBody"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+    </main>
+  </div>
+
+  <div id="imgModal" class="fixed inset-0 bg-black/70 hidden items-center justify-center z-50 p-4" onclick="closeModal()">
+    <img id="modalImg" class="max-w-full max-h-[90vh] rounded-lg shadow-2xl">
+  </div>
+
+  <!-- MODAL TAMBAH MATERI -->
+  <div id="materiModal" class="fixed inset-0 bg-black/50 hidden items-center justify-center z-50 p-4">
+    <div class="bg-white rounded-lg shadow-xl max-w-md w-full p-6" onclick="event.stopPropagation()">
+      <h3 class="text-lg font-bold text-gray-800 mb-4">Tambah Materi Pembelajaran</h3>
+      <div class="space-y-3">
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-1">Mata Pelajaran</label>
+          <input id="materiMapel" type="text" placeholder="Contoh: Matematika" class="w-full px-3 py-2 border rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 outline-none">
+        </div>
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-1">Judul Materi</label>
+          <input id="materiJudul" type="text" placeholder="Contoh: Operasi Bilangan" class="w-full px-3 py-2 border rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 outline-none">
+        </div>
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-1">Tanggal Materi</label>
+          <input id="materiTanggal" type="date" class="w-full px-3 py-2 border rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 outline-none">
+        </div>
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-1">Kelas Tujuan</label>
+          <select id="materiKelas" class="w-full px-3 py-2 border rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 outline-none"></select>
+        </div>
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-1">Deskripsi (opsional)</label>
+          <textarea id="materiDeskripsi" placeholder="Catatan tambahan atau tugas" rows="3" class="w-full px-3 py-2 border rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 outline-none"></textarea>
+        </div>
+        <div class="flex gap-2 pt-2">
+          <button onclick="closeMateriModal()" class="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50">
+            Batal
+          </button>
+          <button onclick="saveMateri()" class="flex-1 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700">
+            Simpan
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL PENCAPAIAN SISWA -->
+  <div id="pencapaianModal" class="fixed inset-0 bg-black/50 hidden items-center justify-center z-50 p-4">
+    <div class="bg-white rounded-xl shadow-xl max-w-2xl w-full p-6" onclick="event.stopPropagation()">
+      <input type="hidden" id="pencapaianMaterialId">
+      <div class="flex items-center justify-between mb-4"><div><h3 class="text-lg font-bold text-gray-800">Pencapaian Setiap Siswa</h3><p id="pencapaianMaterialTitle" class="text-sm text-gray-500"></p></div><button onclick="closePencapaianModal()" class="text-gray-400 hover:text-gray-700"><i class="fas fa-times"></i></button></div>
+      <div id="pencapaianBody" class="max-h-[55vh] overflow-y-auto"></div>
+      <div class="flex gap-2 pt-4"><button onclick="closePencapaianModal()" class="flex-1 px-4 py-2 border rounded-lg">Batal</button><button onclick="savePencapaian()" class="flex-1 px-4 py-2 bg-indigo-600 text-white rounded-lg">Simpan Pencapaian</button></div>
+    </div>
+  </div>
+
+  <!-- MODAL EDIT WALI KELAS -->
+  <div id="waliModal" class="fixed inset-0 bg-black/50 hidden items-center justify-center z-50 p-4">
+    <div class="bg-white rounded-lg shadow-xl max-w-md w-full p-6" onclick="event.stopPropagation()">
+      <h3 class="text-lg font-bold text-gray-800 mb-4" id="waliModalTitle">Edit Wali Kelas</h3>
+      <div class="space-y-3">
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-1">Nama Wali Kelas</label>
+          <input id="waliNama" type="text" placeholder="Masukkan nama wali kelas" class="w-full px-3 py-2 border rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 outline-none">
+        </div>
+        <div class="flex gap-2 pt-2">
+          <button onclick="closeWaliModal()" class="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50">
+            Batal
+          </button>
+          <button onclick="saveWali()" class="flex-1 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700">
+            Simpan
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // ===== DATA KELAS TETAP =====
+    const KELAS_DEFAULT = [
+      { id: 'paud', nama: 'PAUD', wali: 'Ibu Sari' },
+      { id: 'sda', nama: 'SD A', wali: 'Bapak Andi' },
+      { id: 'sdb', nama: 'SD B', wali: 'Ibu Rina' },
+      { id: 'praremaja', nama: 'Pra Remaja', wali: 'Bapak Joko' },
+      { id: 'mudamudi', nama: 'Muda-Mudi', wali: 'Ibu Dewi' }
+    ];
+
+    // Semua data disimpan GLOBAL (shared untuk semua guru)
+    const STORAGE_KEY = 'absensiBelajar';
+    const STORAGE_BACKUP_KEY = 'absensiBelajarBackup';
+    const STORAGE_RESTORE_KEY = 'absensiBelajarRestore';
+
+    function readStoredData() {
+      const sources = [];
+      try {
+        if (window.localStorage) {
+          sources.push(window.localStorage.getItem(STORAGE_KEY));
+          sources.push(window.localStorage.getItem(STORAGE_BACKUP_KEY));
+          sources.push(window.localStorage.getItem(STORAGE_RESTORE_KEY));
+        }
+      } catch (e) {}
+      try {
+        if (window.sessionStorage) {
+          sources.push(window.sessionStorage.getItem(STORAGE_KEY));
+        }
+      } catch (e) {}
+
+      for (const raw of sources) {
+        if (!raw) continue;
+        try {
+          const parsed = JSON.parse(raw);
+          if (parsed && typeof parsed === 'object' && parsed.siswa && Array.isArray(parsed.siswa)) return parsed;
+        } catch (e) {}
+      }
+      return null;
+    }
+
+    let serverAuthenticated = false;
+    let csrfToken = '';
+    let saveTimer = null;
+    let saveQueue = Promise.resolve();
+    let saveVersion = 0;
+    let lastSavedVersion = 0;
+
+    function buildSavePayload() {
+      if (!data || !Array.isArray(data.siswa)) return null;
+      if (!data.absensi) data.absensi = {};
+      if (!data.tugas) data.tugas = [];
+      if (!data.catatan) data.catatan = [];
+      if (!data.materi) data.materi = [];
+      if (!data.aktivitas) data.aktivitas = [];
+      if (!data.kelas) data.kelas = JSON.parse(JSON.stringify(KELAS_DEFAULT));
+      return JSON.stringify(data);
+    }
+
+    function persistLocalSnapshot() {
+      try {
+        const snapshot = JSON.stringify(data);
+        localStorage.setItem(STORAGE_KEY, snapshot);
+        localStorage.setItem(STORAGE_BACKUP_KEY, snapshot);
+        return true;
+      } catch (e) {
+        console.warn('Local snapshot gagal:', e);
+        return false;
+      }
+    }
+
+    function saveNow() {
+      if (!serverAuthenticated) return Promise.resolve(false);
+      const payload = buildSavePayload();
+      if (payload === null) return Promise.resolve(false);
+      const version = ++saveVersion;
+      // Snapshot dibuat saat perubahan terjadi. Queue menjamin request dikirim
+      // berurutan sehingga perubahan terbaru tidak tertimpa request lama.
+      saveQueue = saveQueue.then(async function () {
+        const result = await apiJson('api/api.php?action=save', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'X-CSRF-Token': csrfToken
+          },
+          body: payload
+        });
+        if (!result.success) throw new Error(result.message || 'Gagal menyimpan data.');
+        lastSavedVersion = version;
+        return true;
+      }).catch(function (err) {
+        console.error('Gagal menyimpan ke server:', err);
+        if (err && err.status === 401) forceLogout('Sesi login telah berakhir. Silakan login kembali.');
+        return false;
+      });
+      return saveQueue;
+    }
+
+    function save() {
+      // UI selalu diperbarui dari state terbaru. Local snapshot hanya sebagai
+      // pemulihan sementara; sumber data permanen tetap MySQL.
+      persistLocalSnapshot();
+      return saveNow();
+    }
+
+    async function flushPendingSave() {
+      if (!serverAuthenticated) return false;
+      try {
+        // Kirim snapshot TERAKHIR secara eksplisit, lalu tunggu seluruh queue.
+        clearTimeout(saveTimer);
+        await saveNow();
+        await saveQueue;
+        return lastSavedVersion >= saveVersion;
+      } catch (e) {
+        console.error('Flush save gagal:', e);
+        return false;
+      }
+    }
+
+    async function apiJson(url, options) {
+      const opts = Object.assign({ credentials: 'same-origin', cache: 'no-store' }, options || {});
+      const response = await fetch(url, opts);
+      let result = null;
+      try { result = await response.json(); } catch (e) { result = null; }
+      if (!response.ok) {
+        const message = result && result.message ? result.message : 'Permintaan ke server gagal.';
+        const err = new Error(message);
+        err.status = response.status;
+        throw err;
+      }
+      return result;
+    }
+
+    async function loadServerData() {
+      const result = await apiJson('api/api.php?action=load', { method: 'GET' });
+      if (!result.success || !result.data) throw new Error(result.message || 'Data server tidak dapat dimuat.');
+      data = result.data;
+      data.user = result.data.user || null;
+      if (!Array.isArray(data.kelas) || !data.kelas.length) data.kelas = JSON.parse(JSON.stringify(KELAS_DEFAULT));
+      if (!Array.isArray(data.siswa)) data.siswa = [];
+      if (!data.absensi) data.absensi = {};
+      if (!Array.isArray(data.tugas)) data.tugas = [];
+      if (!Array.isArray(data.catatan)) data.catatan = [];
+      if (!Array.isArray(data.materi)) data.materi = [];
+      if (!Array.isArray(data.aktivitas)) data.aktivitas = [];
+      data.materi.forEach(function(m) {
+        if (!m.pencapaian || typeof m.pencapaian !== 'object' || Array.isArray(m.pencapaian)) m.pencapaian = {};
+        if (!m.targetKelas) m.targetKelas = '';
+      });
+      return data;
+    }
+
+    async function login() {
+      const nameEl = document.getElementById('loginName');
+      const passEl = document.getElementById('loginPassword');
+      const btn = document.getElementById('loginButton');
+      const name = (nameEl ? nameEl.value : '').trim();
+      const password = passEl ? passEl.value : '';
+      const errEl = document.getElementById('loginError');
+      if (errEl) { errEl.textContent = ''; errEl.classList.add('hidden'); }
+      if (!name || !password) {
+        if (errEl) { errEl.textContent = 'Nama guru dan password wajib diisi.'; errEl.classList.remove('hidden'); }
+        return;
+      }
+      if (btn) { btn.disabled = true; btn.textContent = 'Memproses...'; }
+      try {
+        const result = await apiJson('api/api.php?action=login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ nama: name, password: password })
+        });
+        if (!result.success || !result.data) throw new Error(result.message || 'Login gagal.');
+        serverAuthenticated = true;
+        csrfToken = result.data.csrf || '';
+        await loadServerData();
+        startApp();
+        if (passEl) passEl.value = '';
+      } catch (e) {
+        console.error('Login gagal:', e);
+        serverAuthenticated = false;
+        csrfToken = '';
+        if (errEl) { errEl.textContent = e.message || 'Login gagal. Periksa nama guru dan password.'; errEl.classList.remove('hidden'); }
+      } finally {
+        if (btn) { btn.disabled = false; btn.textContent = 'Masuk'; }
+      }
+    }
+
+    function startApp() {
+      const loginPage = document.getElementById('loginPage');
+      const app = document.getElementById('app');
+      if (!serverAuthenticated || !data || !data.user) { showLogin(); return; }
+      try {
+        if (loginPage) loginPage.classList.add('hidden');
+        if (app) app.classList.remove('hidden');
+        const userInfo = document.getElementById('userInfo');
+        if (userInfo) userInfo.textContent = data.user.nama + ' (Guru/Wali Kelas)';
+        const today = getLocalDateString();
+        const absTanggal = document.getElementById('absensiTanggal');
+        if (absTanggal && !absTanggal.value) absTanggal.value = today;
+        const laporanBulan = document.getElementById('laporanBulan');
+        if (laporanBulan && !laporanBulan.value) laporanBulan.value = getLocalMonthString();
+        if (typeof isiFilterKelas === 'function') isiFilterKelas();
+        if (typeof setRoleBasedUI === 'function') setRoleBasedUI();
+        if (typeof renderDashboardView === 'function') renderDashboardView();
+        if (typeof updateStats === 'function') updateStats();
+        if (typeof renderAbsensi === 'function') renderAbsensi();
+        if (typeof renderMateri === 'function') renderMateri();
+        if (typeof renderSiswa === 'function') renderSiswa();
+        if (typeof renderKelas === 'function') renderKelas();
+        if (typeof renderAktivitas === 'function') renderAktivitas();
+        if (typeof renderLaporan === 'function') renderLaporan();
+        if (typeof isiDropdownProgress === 'function') isiDropdownProgress();
+        window.scrollTo(0, 0);
+      } catch (e) {
+        console.error('Dashboard gagal dimuat:', e);
+        // Jangan menghapus session/data hanya karena satu komponen UI gagal.
+        if (app) app.classList.remove('hidden');
+        if (loginPage) loginPage.classList.add('hidden');
+        const container = document.getElementById('dashboardContent');
+        if (container) container.innerHTML = '<div class="bg-white rounded-xl border p-6 text-red-600">Dashboard mengalami kesalahan tampilan. Data dan login tetap aman. Silakan buka menu lain atau muat ulang halaman.</div>';
+      }
+    }
+
+    async function logout() {
+      if (!serverAuthenticated) { showLogin(); return; }
+      const btns = document.querySelectorAll('[onclick="logout()"]');
+      btns.forEach(function(b){ b.disabled = true; b.textContent = 'Menyimpan...'; });
+      try {
+        // Jangan menghancurkan session sebelum seluruh perubahan terakhir selesai tersimpan.
+        const saved = await flushPendingSave();
+        if (!saved) {
+          throw new Error('Data terakhir belum berhasil disimpan ke server. Logout dibatalkan agar data tidak hilang.');
+        }
+        await apiJson('api/api.php?action=logout', {
+          method: 'POST',
+          headers: { 'X-CSRF-Token': csrfToken }
+        });
+        serverAuthenticated = false;
+        csrfToken = '';
+        if (data) data.user = null;
+        showLogin();
+      } catch (e) {
+        console.error('Logout gagal:', e);
+        alert(e.message || 'Logout gagal. Data belum dihapus dan session tetap aktif.');
+      } finally {
+        btns.forEach(function(b){ b.disabled = false; b.innerHTML = '<i class="fas fa-sign-out-alt mr-1"></i> Keluar'; });
+      }
+    }
+
+    async function checkServerSession() {
+      try {
+        const result = await apiJson('api/api.php?action=auth', { method: 'GET' });
+        if (result.success && result.data && result.data.role === 'guru') {
+          serverAuthenticated = true;
+          csrfToken = result.data.csrf || '';
+          await loadServerData();
+          startApp();
+          return true;
+        }
+      } catch (e) {
+        // Belum login atau sesi tidak valid. Tetap tampilkan halaman login.
+      }
+      serverAuthenticated = false;
+      showLogin();
+      return false;
+    }
+
+    function showLogin(message) {
+      const app = document.getElementById('app');
+      const loginPage = document.getElementById('loginPage');
+      if (app) app.classList.add('hidden');
+      if (loginPage) loginPage.classList.remove('hidden');
+      const err = document.getElementById('loginError');
+      if (err) {
+        if (message) { err.textContent = message; err.classList.remove('hidden'); }
+        else { err.textContent = ''; err.classList.add('hidden'); }
+      }
+    }
+
+    function forceLogout(message) {
+      serverAuthenticated = false;
+      csrfToken = '';
+      if (data) data.user = null;
+      showLogin(message || 'Silakan login kembali.');
+    }
+
+    let data = readStoredData();
+
+    // Jika tidak ada data atau data corrupt, buat data default
+    if (!data || !Array.isArray(data.siswa)) {
+      data = {
+        user: null,
+        kelas: JSON.parse(JSON.stringify(KELAS_DEFAULT)),
+        siswa: [
+          { id: 1, nama: 'Aisyah Putri', kelasId: 'paud', ortu: 'Ibu Ani' },
+          { id: 2, nama: 'Budi Santoso', kelasId: 'sda', ortu: 'Bapak Budi' },
+          { id: 3, nama: 'Citra Lestari', kelasId: 'sda', ortu: 'Ibu Citra' },
+          { id: 4, nama: 'Dimas Pratama', kelasId: 'sdb', ortu: 'Bapak Dimas' },
+          { id: 5, nama: 'Eka Rahmawati', kelasId: 'praremaja', ortu: 'Ibu Eka' },
+          { id: 6, nama: 'Fajar Nugroho', kelasId: 'mudamudi', ortu: 'Bapak Fajar' }
+        ],
+        absensi: {},
+        materi: [],
+        tugas: [],
+        catatan: [],
+        aktivitas: []
+      };
+      // Simpan snapshot default lokal; data permanen dibuat setelah login.
+      persistLocalSnapshot();
+    } else {
+      // Validasi data yang sudah ada tetap lengkap
+      if (!data.user) data.user = null;
+      if (!data.absensi) data.absensi = {};
+      if (!data.tugas) data.tugas = [];
+      if (!data.catatan) data.catatan = [];
+      if (!data.materi) data.materi = [];
+      if (!data.aktivitas) data.aktivitas = [];
+    }
+
+    // Pastikan field ada dan tidak kosong
+    if (!data.kelas || !Array.isArray(data.kelas) || data.kelas.length === 0) {
+      data.kelas = JSON.parse(JSON.stringify(KELAS_DEFAULT));
+    }
+    if (!Array.isArray(data.siswa)) {
+      data.siswa = [];
+    }
+
+    // Migrasi data lama (jika kelas masih string)
+    data.siswa.forEach(function(s) {
+      if (!s.kelasId && s.kelas) {
+        const found = data.kelas.find(function(k) { return k.nama === s.kelas || k.id === s.kelas; });
+        s.kelasId = found ? found.id : 'sda';
+        delete s.kelas;
+      }
+      if (!s.kelasId) s.kelasId = 'sda';
+    });
+    data.materi.forEach(function(m){
+      if (!m.pencapaian || typeof m.pencapaian !== 'object' || Array.isArray(m.pencapaian)) m.pencapaian = {};
+      if (!m.targetKelas) m.targetKelas = '';
+      data.siswa.forEach(function(s){ if (m.pencapaian[s.id] == null) m.pencapaian[s.id] = 0; });
+    });
+
+    let currentFileData = null;
+    let currentFileName = null;
+
+
+    function escapeHtml(value) {
+      return String(value ?? '')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/\"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+    }
+
+    function getLocalDateString(date) {
+      const d = date || new Date();
+      const year = d.getFullYear();
+      const month = String(d.getMonth() + 1).padStart(2, '0');
+      const day = String(d.getDate()).padStart(2, '0');
+      return year + '-' + month + '-' + day;
+    }
+
+    function getLocalMonthString(date) {
+      const d = date || new Date();
+      const year = d.getFullYear();
+      const month = String(d.getMonth() + 1).padStart(2, '0');
+      return year + '-' + month;
+    }
+
+    function getKelasNama(kelasId) {
+      const k = data.kelas.find(function(x) { return x.id === kelasId; });
+      return k ? k.nama : kelasId;
+    }
+
+    function getKelasWali(kelasId) {
+      const k = data.kelas.find(function(x) { return x.id === kelasId; });
+      return k ? k.wali : '-';
+    }
+
+    function isParentRole() {
+      return data.user && data.user.role === 'ortu';
+    }
+
+    function getParentChild() {
+      if (!isParentRole()) return null;
+      const namaOrtu = (data.user && data.user.nama || '').trim().toLowerCase();
+      if (!namaOrtu) return null;
+      return data.siswa.find(function(s) {
+        const ortu = (s.ortu || '').trim().toLowerCase();
+        return ortu === namaOrtu || ortu.includes(namaOrtu) || namaOrtu.includes(ortu);
+      }) || null;
+    }
+
+    // ===== NAVIGASI & STATISTIK =====
+    function showTab(tab) {
+      if (isParentRole() && tab !== 'dashboard' && tab !== 'progress') tab = 'dashboard';
+      document.querySelectorAll('.tab-content').forEach(function(el){ el.classList.add('hidden'); });
+      const target = document.getElementById('tab-' + tab);
+      if (target) target.classList.remove('hidden');
+      document.querySelectorAll('.tab-btn').forEach(function(btn){ btn.classList.remove('text-indigo-600','border-b-2','border-indigo-600'); btn.classList.add('text-gray-500'); });
+      const active = document.querySelector('[data-tab="' + tab + '"]');
+      if (active) { active.classList.add('text-indigo-600','border-b-2','border-indigo-600'); active.classList.remove('text-gray-500'); }
+      if (tab === 'dashboard') renderDashboardView();
+      if (tab === 'absensi') renderAbsensi();
+      if (tab === 'belajar') renderMateri();
+      if (tab === 'laporan') renderLaporan();
+      if (tab === 'kelas') renderKelas();
+      if (tab === 'siswa') renderSiswa();
+    }
+
+    function isiFilterKelas() {
+      const opts = '<option value="">Semua Kelas</option>' + (data.kelas || []).map(function(k){ return '<option value="' + escapeHtml(k.id) + '">' + escapeHtml(k.nama) + '</option>'; }).join('');
+      ['filterKelasAbsensi','filterKelasLaporan','filterKelasSiswa'].forEach(function(id){
+        const el = document.getElementById(id); if (!el) return;
+        const old = el.value; el.innerHTML = opts;
+        Array.from(el.options).some(function(o){ if (o.value === old) { el.value = old; return true; } return false; });
+      });
+    }
+
+    function updateStats() {
+      const statSiswa=document.getElementById('statSiswa'), statKelas=document.getElementById('statKelas'), statHadir=document.getElementById('statHadir'), statTugas=document.getElementById('statTugas');
+      if(statSiswa) statSiswa.textContent=(data.siswa||[]).length;
+      if(statKelas) statKelas.textContent=(data.kelas||[]).length;
+      const tanggal=document.getElementById('absensiTanggal'); const tgl=(tanggal&&tanggal.value)||getLocalDateString(); const abs=(data.absensi&&data.absensi[tgl])||{};
+      if(statHadir) statHadir.textContent=Object.keys(abs).filter(function(id){return abs[id]==='H';}).length;
+      if(statTugas) statTugas.textContent=(data.tugas||[]).length;
+    }
+
+    function setRoleBasedUI() {
+      const isParent = isParentRole();
+      const exportBtn = document.getElementById('exportButton');
+      const importBtn = document.getElementById('importButton');
+      if (exportBtn) exportBtn.classList.toggle('hidden', isParent);
+      if (importBtn) importBtn.classList.toggle('hidden', isParent);
+
+      document.querySelectorAll('.tab-btn').forEach(function(btn) {
+        const tab = btn.getAttribute('data-tab');
+        const shouldShow = !isParent || tab === 'dashboard' || tab === 'progress';
+        btn.classList.toggle('hidden', !shouldShow);
+      });
+
+      if (isParent) {
+        showTab('dashboard');
+      }
+    }
+
+    function getMonthName(month) {
+      const parts = month.split('-');
+      const d = new Date(Number(parts[0]), Number(parts[1])-1, 1);
+      return d.toLocaleDateString('id-ID', {month:'long', year:'numeric'});
+    }
+
+    function monthStats(month) {
+      const result = {H:0,S:0,I:0,A:0, days:0, byDay:{}, byWeek:{1:{H:0,total:0},2:{H:0,total:0},3:{H:0,total:0},4:{H:0,total:0},5:{H:0,total:0}}};
+      Object.keys(data.absensi || {}).forEach(function(tgl){
+        if (!tgl.startsWith(month)) return;
+        const abs = data.absensi[tgl] || {};
+        let hasData = false;
+        Object.keys(abs).forEach(function(sid){
+          const st = abs[sid];
+          if (['H','S','I','A'].indexOf(st) === -1) return;
+          hasData = true; result[st]++;
+          const day = Number(tgl.slice(8,10));
+          const week = Math.min(5, Math.ceil(day/7));
+          result.byWeek[week].total++;
+          if (st === 'H') result.byWeek[week].H++;
+        });
+        if (hasData) { result.days++; result.byDay[tgl] = abs; }
+      });
+      return result;
+    }
+
+    function renderDashboardView() {
+      const container = document.getElementById('dashboardContent');
+      if (!container) return;
+
+      try {
+        // Normalisasi data agar dashboard tidak crash ketika ada data lama
+        // yang memiliki field kosong/null atau struktur yang tidak lengkap.
+        if (!data || typeof data !== 'object') data = {};
+        if (!Array.isArray(data.kelas)) data.kelas = [];
+        if (!Array.isArray(data.siswa)) data.siswa = [];
+        if (!Array.isArray(data.materi)) data.materi = [];
+        if (!data.absensi || typeof data.absensi !== 'object' || Array.isArray(data.absensi)) data.absensi = {};
+        if (!Array.isArray(data.tugas)) data.tugas = [];
+        if (!Array.isArray(data.catatan)) data.catatan = [];
+        if (!Array.isArray(data.aktivitas)) data.aktivitas = [];
+
+        // Buang item null/korup yang dapat menyebabkan .map/.pencapaian crash.
+        data.kelas = data.kelas.filter(function(k) {
+          return k && typeof k === 'object';
+        });
+        data.siswa = data.siswa.filter(function(s) {
+          return s && typeof s === 'object';
+        });
+        data.materi = data.materi.filter(function(m) {
+          return m && typeof m === 'object';
+        });
+
+        // Pastikan model materi selalu aman dipakai dashboard.
+        data.materi.forEach(function(m) {
+          if (!m.pencapaian || typeof m.pencapaian !== 'object' || Array.isArray(m.pencapaian)) {
+            m.pencapaian = {};
+          }
+          if (m.targetKelas == null) m.targetKelas = '';
+          if (m.tanggal == null) m.tanggal = '';
+          if (m.mapel == null) m.mapel = '';
+          if (m.judul == null) m.judul = '';
+        });
+
+        const monthEl = document.getElementById('dashboardBulan');
+        const month = (monthEl && monthEl.value) || getLocalMonthString();
+        const ms = monthStats(month);
+        const totalSiswa = data.siswa.length;
+        const totalKelas = data.kelas.length;
+        const totalStatus = ms.H + ms.S + ms.I + ms.A;
+        const hadirPct = totalStatus ? Math.round(ms.H / totalStatus * 100) : 0;
+        const materiTotal = data.materi.length;
+
+        let progressSum = 0;
+        let progressCount = 0;
+
+        data.materi.forEach(function(m) {
+          const vals = Object.keys(m.pencapaian || {})
+            .map(function(k) { return Number(m.pencapaian[k]); })
+            .filter(function(v) { return Number.isFinite(v); });
+
+          if (vals.length) {
+            progressSum += vals.reduce(function(a, b) { return a + b; }, 0) / vals.length;
+            progressCount++;
+          }
+        });
+
+        const avgProgress = progressCount ? Math.round(progressSum / progressCount) : 0;
+        const monthOptions = [];
+
+        for (let i = 0; i < 12; i++) {
+          const d = new Date();
+          d.setMonth(d.getMonth() - i);
+          const m = d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0');
+          monthOptions.push(
+            '<option value="' + m + '" ' + (m === month ? 'selected' : '') + '>' +
+            getMonthName(m) + '</option>'
+          );
+        }
+
+        const weekBars = [1,2,3,4,5].map(function(w) {
+          const x = ms.byWeek[w] || {H:0,total:0};
+          const pct = x.total ? Math.round(x.H / x.total * 100) : 0;
+
+          return '<div class="flex-1 text-center">' +
+            '<div class="text-xs font-semibold text-indigo-600 mb-1">' + pct + '%</div>' +
+            '<div class="h-32 bg-gray-100 rounded-xl flex items-end overflow-hidden">' +
+              '<div class="w-full bg-indigo-500 rounded-t-xl" style="height:' + Math.max(4, pct) + '%"></div>' +
+            '</div>' +
+            '<div class="text-xs text-gray-500 mt-2">Minggu ' + w + '</div>' +
+          '</div>';
+        }).join('');
+
+        const perhatian = data.siswa.map(function(s) {
+          let h = 0, t = 0;
+
+          Object.keys(data.absensi).forEach(function(d) {
+            if (!d.startsWith(month)) return;
+            const st = (data.absensi[d] || {})[s.id];
+            if (st) {
+              t++;
+              if (st === 'H') h++;
+            }
+          });
+
+          return {
+            s: s,
+            pct: t ? Math.round(h / t * 100) : 100,
+            total: t
+          };
+        }).filter(function(x) {
+          return x.total > 0 && x.pct < 75;
+        }).sort(function(a, b) {
+          return a.pct - b.pct;
+        }).slice(0, 5);
+
+        const perhatianHtml = perhatian.length
+          ? perhatian.map(function(x) {
+              return '<button onclick="showTab(\'siswa\')" class="w-full flex items-center gap-3 p-2 rounded-lg hover:bg-gray-50 text-left">' +
+                '<div class="w-9 h-9 rounded-full bg-red-50 text-red-600 flex items-center justify-center"><i class="fas fa-user"></i></div>' +
+                '<div class="flex-1 min-w-0">' +
+                  '<div class="font-medium truncate">' + escapeHtml(x.s.nama || '') + '</div>' +
+                  '<div class="text-xs text-gray-400">' + escapeHtml(getKelasNama(x.s.kelasId || '')) + ' • ' + x.total + ' status</div>' +
+                '</div>' +
+                '<b class="text-red-600">' + x.pct + '%</b>' +
+              '</button>';
+            }).join('')
+          : '<p class="text-sm text-gray-400 py-6 text-center">Tidak ada siswa dengan kehadiran di bawah 75% pada bulan ini.</p>';
+
+        const recent = data.materi.slice().sort(function(a, b) {
+          return (b.tanggal || '').localeCompare(a.tanggal || '');
+        }).slice(0, 4);
+
+        const materiHtml = recent.length
+          ? recent.map(function(m) {
+              const vals = Object.keys(m.pencapaian || {})
+                .map(function(k) { return Number(m.pencapaian[k]); })
+                .filter(function(v) { return Number.isFinite(v); });
+
+              const p = vals.length
+                ? Math.round(vals.reduce(function(a, b) { return a + b; }, 0) / vals.length)
+                : 0;
+
+              const targetNama = m.targetKelas
+                ? getKelasNama(m.targetKelas)
+                : 'Semua Kelas';
+
+              return '<div class="flex items-center gap-3 py-3 border-b last:border-0 border-gray-100">' +
+                '<div class="w-10 h-10 rounded-xl bg-purple-50 text-purple-600 flex items-center justify-center"><i class="fas fa-book-open"></i></div>' +
+                '<div class="flex-1 min-w-0">' +
+                  '<div class="font-medium truncate">' + escapeHtml(m.judul || '') + '</div>' +
+                  '<div class="text-xs text-gray-400">' + escapeHtml(m.mapel || '') + ' • ' + escapeHtml(targetNama) + '</div>' +
+                '</div>' +
+                '<div class="text-right"><b class="text-indigo-600">' + p + '%</b><div class="text-[10px] text-gray-400">pencapaian</div></div>' +
+              '</div>';
+            }).join('')
+          : '<p class="text-sm text-gray-400 py-6 text-center">Belum ada materi.</p>';
+
+        container.innerHTML =
+          '<div class="mb-5">' +
+            '<div class="flex flex-col md:flex-row md:items-center md:justify-between gap-3">' +
+              '<div>' +
+                '<h2 class="text-2xl font-bold text-gray-900">Dashboard Guru</h2>' +
+                '<p class="text-sm text-gray-500 mt-1">Ringkasan aktivitas pembelajaran berdasarkan data bulan berjalan.</p>' +
+              '</div>' +
+              '<div class="flex items-center gap-2">' +
+                '<label class="text-sm text-gray-500">Periode</label>' +
+                '<select id="dashboardBulan" onchange="renderDashboardView()" class="px-3 py-2 border rounded-lg text-sm bg-white">' +
+                  monthOptions.join('') +
+                '</select>' +
+              '</div>' +
+            '</div>' +
+          '</div>' +
+
+          '<div class="grid grid-cols-2 lg:grid-cols-5 gap-4 mb-5">' +
+            '<div class="bg-white rounded-2xl border shadow-sm p-4"><div class="text-xs text-gray-500">Siswa Aktif</div><div class="text-2xl font-bold mt-1">' + totalSiswa + '</div></div>' +
+            '<div class="bg-white rounded-2xl border shadow-sm p-4"><div class="text-xs text-gray-500">Kelas</div><div class="text-2xl font-bold mt-1">' + totalKelas + '</div></div>' +
+            '<div class="bg-white rounded-2xl border shadow-sm p-4"><div class="text-xs text-gray-500">Hadir Bulan Ini</div><div class="text-2xl font-bold mt-1 text-green-600">' + ms.H + '</div></div>' +
+            '<div class="bg-white rounded-2xl border shadow-sm p-4"><div class="text-xs text-gray-500">Materi</div><div class="text-2xl font-bold mt-1">' + materiTotal + '</div></div>' +
+            '<div class="bg-white rounded-2xl border shadow-sm p-4"><div class="text-xs text-gray-500">Pencapaian</div><div class="text-2xl font-bold mt-1 text-indigo-600">' + avgProgress + '%</div></div>' +
+          '</div>' +
+
+          '<div class="grid grid-cols-1 xl:grid-cols-2 gap-5 mb-5">' +
+            '<div class="bg-white rounded-2xl border shadow-sm p-5">' +
+              '<div class="flex justify-between mb-4"><div><h3 class="font-bold">Tren Kehadiran Bulanan</h3><p class="text-xs text-gray-400">Persentase hadir per minggu</p></div><i class="fas fa-chart-column text-indigo-500"></i></div>' +
+              '<div class="flex gap-3 items-end">' + weekBars + '</div>' +
+            '</div>' +
+
+            '<div class="bg-white rounded-2xl border shadow-sm p-5">' +
+              '<div class="flex justify-between mb-4"><div><h3 class="font-bold">Rekap ' + getMonthName(month) + '</h3><p class="text-xs text-gray-400">Seluruh status absensi yang tercatat</p></div><i class="fas fa-chart-pie text-indigo-500"></i></div>' +
+              '<div class="grid grid-cols-4 gap-2 text-center">' +
+                '<div class="bg-green-50 rounded-xl p-3"><b class="text-green-700 text-xl">' + ms.H + '</b><div class="text-xs text-gray-500">Hadir</div></div>' +
+                '<div class="bg-amber-50 rounded-xl p-3"><b class="text-amber-700 text-xl">' + ms.S + '</b><div class="text-xs text-gray-500">Sakit</div></div>' +
+                '<div class="bg-blue-50 rounded-xl p-3"><b class="text-blue-700 text-xl">' + ms.I + '</b><div class="text-xs text-gray-500">Izin</div></div>' +
+                '<div class="bg-red-50 rounded-xl p-3"><b class="text-red-700 text-xl">' + ms.A + '</b><div class="text-xs text-gray-500">Alpha</div></div>' +
+              '</div>' +
+              '<div class="mt-4 text-sm text-gray-500">Kehadiran: <b class="text-gray-900">' + hadirPct + '%</b> dari ' + totalStatus + ' status tercatat.</div>' +
+            '</div>' +
+          '</div>' +
+
+          '<div class="grid grid-cols-1 xl:grid-cols-2 gap-5">' +
+            '<div class="bg-white rounded-2xl border shadow-sm p-5"><h3 class="font-bold mb-3">Siswa Perlu Perhatian</h3>' + perhatianHtml + '</div>' +
+            '<div class="bg-white rounded-2xl border shadow-sm p-5"><h3 class="font-bold mb-3">Materi Terbaru</h3>' + materiHtml + '</div>' +
+          '</div>';
+
+      } catch (e) {
+        console.error('Dashboard gagal dimuat:', e);
+        container.innerHTML =
+          '<div class="p-6 bg-white rounded-xl border text-red-600">' +
+          'Dashboard mengalami kesalahan tampilan. Data dan login tetap aman. Silakan buka menu lain atau muat ulang halaman.' +
+          '</div>';
+      }
+    }
+
+    function refreshAllViews(){
+      try { isiFilterKelas(); } catch(e){}
+      try { renderDashboardView(); } catch(e){}
+      try { updateStats(); } catch(e){}
+      try { renderAbsensi(); } catch(e){}
+      try { renderMateri(); } catch(e){}
+      try { renderSiswa(); } catch(e){}
+      try { renderKelas(); } catch(e){}
+      try { renderAktivitas(); } catch(e){}
+      try { renderLaporan(); } catch(e){}
+      try { isiDropdownProgress(); } catch(e){}
+    }
+
+    // ===== ABSENSI =====
+    function renderAbsensi() {
+      const tanggalEl = document.getElementById('absensiTanggal');
+      const filterEl = document.getElementById('filterKelasAbsensi');
+      const tgl = (tanggalEl && tanggalEl.value) || getLocalDateString();
+      const filterKelas = filterEl ? filterEl.value : '';
+      if (!data.absensi[tgl]) data.absensi[tgl] = {};
+      let list = data.siswa;
+      if (filterKelas) list = list.filter(function(s) { return s.kelasId === filterKelas; });
+
+      const tbody = document.getElementById('absensiBody');
+      let html = '';
+      list.forEach(function(s, i) {
+        const status = data.absensi[tgl][s.id] || '-';
+        const options = [
+          { value: 'H', label: 'Hadir', color: 'bg-green-100 text-green-700', icon: '☑' },
+          { value: 'S', label: 'Sakit', color: 'bg-yellow-100 text-yellow-700', icon: '☑' },
+          { value: 'I', label: 'Izin', color: 'bg-blue-100 text-blue-700', icon: '☑' },
+          { value: 'A', label: 'Alpha', color: 'bg-red-100 text-red-700', icon: '☑' }
+        ];
+        const opsiHtml = options.map(function(opt) {
+          const active = status === opt.value;
+          return '<button onclick="ubahAbsensi(' + s.id + ', \'' + opt.value + '\')" class="flex items-center gap-1 px-2 py-1 rounded-full text-[11px] font-medium border ' + (active ? opt.color + ' border-transparent' : 'bg-white text-gray-500 border-gray-200') + '">' +
+            '<span class="text-[12px]">' + (active ? '☑' : '☐') + '</span>' +
+            '<span>' + opt.label + '</span>' +
+            '</button>';
+        }).join('');
+
+        html += '<tr class="border-t hover:bg-gray-50"><td class="px-4 py-3">' + (i+1) + '</td><td class="px-4 py-3 font-medium">' + s.nama + '</td><td class="px-4 py-3">' + getKelasNama(s.kelasId) + '</td><td class="px-4 py-3"><div class="flex flex-wrap justify-center gap-1">' + opsiHtml + '</div></td></tr>';
+      });
+      tbody.innerHTML = html || '<tr><td colspan="4" class="px-4 py-6 text-center text-gray-400">Tidak ada siswa</td></tr>';
+      updateStats();
+    }
+
+    async function ubahAbsensi(id, nextStatus) {
+      const tglEl = document.getElementById('absensiTanggal');
+      const tgl = tglEl ? tglEl.value : getLocalDateString();
+      if (!tgl) return;
+      if (!data.absensi[tgl]) data.absensi[tgl] = {};
+      const sekarang = data.absensi[tgl][id] || '-';
+      const next = sekarang === nextStatus ? '-' : nextStatus;
+      if (next === '-') delete data.absensi[tgl][id]; else data.absensi[tgl][id] = next;
+      const found = data.siswa.find(function(s){ return String(s.id) === String(id); });
+      const label = next === '-' ? 'Belum' : ({H:'Hadir',S:'Sakit',I:'Izin',A:'Alpha'})[next];
+      if (found) data.aktivitas.unshift({waktu:new Date().toLocaleTimeString('id-ID'), teks:'Absensi '+found.nama+' → '+label});
+      if (data.aktivitas.length>15) data.aktivitas.pop();
+      refreshAllViews();
+      const ok = await save();
+      if (!ok) alert('Absensi tampil di layar tetapi belum tersimpan ke server. Periksa koneksi lalu coba lagi.');
+    }
+
+    // ===== MATERI =====
+    function ensureMaterialModel(m){
+      if (!m.pencapaian || typeof m.pencapaian !== 'object' || Array.isArray(m.pencapaian)) m.pencapaian = {};
+      if (!m.targetKelas) m.targetKelas = '';
+      data.siswa.forEach(function(s){ if (m.pencapaian[s.id] == null) m.pencapaian[s.id] = 0; });
+    }
+
+    function materialAverage(m){
+      ensureMaterialModel(m);
+      let list=data.siswa.filter(function(s){ return !m.targetKelas || s.kelasId===m.targetKelas; });
+      if(!list.length) return 0;
+      return Math.round(list.reduce(function(sum,s){return sum+Number(m.pencapaian[s.id]||0);},0)/list.length);
+    }
+
+    function renderMateri(){
+      const list=document.getElementById('materiList'); if(!list) return;
+      if(!data.materi.length){list.innerHTML='<div class="bg-white rounded-xl p-8 text-center text-gray-400 border">Belum ada materi. Klik "Tambah Materi".</div>';return;}
+      data.materi.forEach(ensureMaterialModel);
+      list.innerHTML=data.materi.slice().sort(function(a,b){return (b.tanggal||'').localeCompare(a.tanggal||'');}).map(function(m){
+        const avg=materialAverage(m); const target=m.targetKelas?getKelasNama(m.targetKelas):'Semua Kelas';
+        return '<div class="bg-white rounded-xl shadow-sm border p-5 mb-3"><div class="flex flex-col md:flex-row md:items-start md:justify-between gap-3"><div class="min-w-0"><div class="flex flex-wrap gap-2"><span class="text-xs bg-indigo-100 text-indigo-700 px-2 py-1 rounded-full">'+escapeHtml(m.mapel)+'</span><span class="text-xs bg-gray-100 text-gray-600 px-2 py-1 rounded-full">'+escapeHtml(target)+'</span><span class="text-xs bg-gray-100 text-gray-600 px-2 py-1 rounded-full">'+escapeHtml(m.tanggal||'-')+'</span></div><h3 class="font-semibold text-gray-800 mt-2">'+escapeHtml(m.judul)+'</h3><p class="text-sm text-gray-600 mt-1">'+escapeHtml(m.deskripsi||'-')+'</p><div class="mt-4"><div class="flex justify-between text-xs mb-1"><span>Pencapaian siswa</span><b class="text-indigo-600">'+avg+'%</b></div><div class="h-2 bg-gray-100 rounded-full overflow-hidden"><div class="h-full bg-indigo-500" style="width:'+avg+'%"></div></div></div></div><div class="flex gap-2 shrink-0"><button onclick="openPencapaianModal('+m.id+')" class="px-3 py-2 text-xs rounded-lg bg-indigo-50 text-indigo-700 hover:bg-indigo-100"><i class="fas fa-chart-line mr-1"></i>Pencapaian</button><select onchange="ubahStatusMateri('+m.id+',this.value)" class="text-xs border rounded-lg px-2 py-1"><option value="belum"'+(m.status==='belum'?' selected':'')+'>Belum</option><option value="proses"'+(m.status==='proses'?' selected':'')+'>Proses</option><option value="selesai"'+(m.status==='selesai'?' selected':'')+'>Selesai</option></select><button onclick="hapusMateri('+m.id+')" class="px-2 text-red-500"><i class="fas fa-trash"></i></button></div></div></div>';
+      }).join('');
+    }
+
+    function tambahMateri(){
+      ['materiMapel','materiJudul','materiDeskripsi','materiTanggal'].forEach(function(id){const el=document.getElementById(id);if(el)el.value='';});
+      const t=document.getElementById('materiTanggal'); if(t)t.value=getLocalDateString();
+      const k=document.getElementById('materiKelas'); if(k)k.innerHTML='<option value="">Semua Kelas</option>'+data.kelas.map(function(x){return '<option value="'+x.id+'">'+escapeHtml(x.nama)+'</option>';}).join('');
+      document.getElementById('materiModal').classList.remove('hidden'); document.getElementById('materiModal').classList.add('flex');
+    }
+    function closeMateriModal(){document.getElementById('materiModal').classList.add('hidden');document.getElementById('materiModal').classList.remove('flex');}
+    async function saveMateri(){
+      const mapel=document.getElementById('materiMapel').value.trim(), judul=document.getElementById('materiJudul').value.trim(), deskripsi=document.getElementById('materiDeskripsi').value.trim(), tanggal=document.getElementById('materiTanggal').value||getLocalDateString(), targetKelas=document.getElementById('materiKelas').value||'';
+      if(!mapel||!judul){alert('Mata pelajaran dan judul materi wajib diisi.');return;}
+      const m={id:Date.now(),tanggal,mapel,judul,deskripsi,status:'belum',targetKelas,pencapaian:{}}; data.siswa.forEach(function(s){m.pencapaian[s.id]=0;}); data.materi.push(m); data.aktivitas.unshift({waktu:new Date().toLocaleTimeString('id-ID'),teks:'Materi baru: '+judul}); if(data.aktivitas.length>15)data.aktivitas.pop();
+      refreshAllViews(); closeMateriModal(); const ok=await save(); if(!ok)alert('Materi belum tersimpan ke server.');
+    }
+    async function ubahStatusMateri(id,status){const m=data.materi.find(function(x){return String(x.id)===String(id);});if(!m)return;m.status=status;refreshAllViews();await save();}
+    async function hapusMateri(id){if(!confirm('Hapus materi ini?'))return;data.materi=data.materi.filter(function(m){return String(m.id)!==String(id);});refreshAllViews();await save();}
+
+    function openPencapaianModal(materialId){
+      const m=data.materi.find(function(x){return String(x.id)===String(materialId);}); if(!m)return; ensureMaterialModel(m);
+      document.getElementById('pencapaianMaterialId').value=m.id; document.getElementById('pencapaianMaterialTitle').textContent=m.judul;
+      const list=data.siswa.filter(function(s){return !m.targetKelas||s.kelasId===m.targetKelas;});
+      document.getElementById('pencapaianBody').innerHTML=list.length?list.map(function(s){const p=Number(m.pencapaian[s.id]||0);return '<div class="grid grid-cols-1 sm:grid-cols-3 gap-2 items-center border-b py-3"><div class="font-medium">'+escapeHtml(s.nama)+'</div><div class="text-xs text-gray-500">'+escapeHtml(getKelasNama(s.kelasId))+'</div><select data-student="'+s.id+'" class="pencapaian-input px-2 py-2 border rounded-lg text-sm"><option value="0"'+(p===0?' selected':'')+'>0% — Belum mulai</option><option value="25"'+(p===25?' selected':'')+'>25% — Mulai</option><option value="50"'+(p===50?' selected':'')+'>50% — Berkembang</option><option value="75"'+(p===75?' selected':'')+'>75% — Baik</option><option value="100"'+(p===100?' selected':'')+'>100% — Selesai</option></select></div>';}).join(''):'<p class="text-sm text-gray-400 py-5 text-center">Tidak ada siswa untuk kelas tujuan.</p>';
+      document.getElementById('pencapaianModal').classList.remove('hidden');document.getElementById('pencapaianModal').classList.add('flex');
+    }
+    function closePencapaianModal(){document.getElementById('pencapaianModal').classList.add('hidden');document.getElementById('pencapaianModal').classList.remove('flex');}
+    async function savePencapaian(){
+      const id=document.getElementById('pencapaianMaterialId').value, m=data.materi.find(function(x){return String(x.id)===String(id);});if(!m)return;
+      ensureMaterialModel(m); document.querySelectorAll('.pencapaian-input').forEach(function(el){m.pencapaian[el.getAttribute('data-student')]=Number(el.value);});
+      data.aktivitas.unshift({waktu:new Date().toLocaleTimeString('id-ID'),teks:'Pencapaian diperbarui: '+m.judul});if(data.aktivitas.length>15)data.aktivitas.pop();
+      refreshAllViews();closePencapaianModal();const ok=await save();if(!ok)alert('Pencapaian belum tersimpan ke server.');
+    }
+
+    // ===== KELAS =====
+    function renderKelas() {
+      const container = document.getElementById('kelasList');
+      let html = '';
+      data.kelas.forEach(function(k) {
+        const jumlah = data.siswa.filter(function(s) { return s.kelasId === k.id; }).length;
+        html += '<div class="bg-white rounded-xl shadow-sm border p-5">' +
+          '<div class="flex items-start justify-between">' +
+            '<div>' +
+              '<h3 class="font-bold text-lg text-gray-800">' + k.nama + '</h3>' +
+              '<p class="text-sm text-gray-500 mt-1"><i class="fas fa-user-tie mr-1"></i>Wali: <b>' + k.wali + '</b></p>' +
+              '<p class="text-sm text-gray-500 mt-1"><i class="fas fa-users mr-1"></i>' + jumlah + ' siswa</p>' +
+            '</div>' +
+            '<button onclick="editWali(\'' + k.id + '\')" class="text-indigo-600 hover:text-indigo-800 text-sm"><i class="fas fa-edit"></i> Edit</button>' +
+          '</div></div>';
+      });
+      container.innerHTML = html;
+    }
+
+    function editWali(kelasId) {
+      const k = data.kelas.find(function(x) { return x.id === kelasId; });
+      if (!k) return;
+      window._currentKelasId = kelasId;
+      document.getElementById('waliModalTitle').textContent = 'Edit Wali Kelas: ' + k.nama;
+      document.getElementById('waliNama').value = k.wali;
+      document.getElementById('waliModal').classList.remove('hidden');
+      document.getElementById('waliModal').classList.add('flex');
+      document.getElementById('waliNama').focus();
+    }
+
+    function closeWaliModal() {
+      document.getElementById('waliModal').classList.add('hidden');
+      document.getElementById('waliModal').classList.remove('flex');
+      window._currentKelasId = null;
+    }
+
+    function saveWali() {
+      const kelasId = window._currentKelasId;
+      const nama = document.getElementById('waliNama').value.trim();
+      
+      if (!nama) { alert('Nama wali kelas harus diisi'); return; }
+      
+      const k = data.kelas.find(function(x) { return x.id === kelasId; });
+      if (k) {
+        const namaLama = k.wali;
+        k.wali = nama;
+        save();
+        renderKelas();
+        tambahAktivitas('Wali kelas ' + k.nama + ' diubah dari ' + namaLama + ' menjadi ' + k.wali);
+      }
+      closeWaliModal();
+    }
+
+    // ===== PROGRESS (Disabled untuk guru-only version) =====
+    function isiDropdownProgress() {
+      // Progress tab dihapus - tidak perlu populate dropdown
+      return;
+    }
+
+    function renderProgressDetail() {
+      const sid = document.getElementById('progressSiswa').value;
+      if (!sid) {
+        document.getElementById('progressEmpty').classList.remove('hidden');
+        document.getElementById('progressDetail').classList.add('hidden');
+        return;
+      }
+      document.getElementById('progressEmpty').classList.add('hidden');
+      document.getElementById('progressDetail').classList.remove('hidden');
+
+      const siswaId = Number(sid);
+      const siswa = data.siswa.find(function(s) { return s.id === siswaId; });
+      if (isParentRole()) {
+        const child = getParentChild();
+        if (child && child.id !== siswaId) {
+          document.getElementById('progressSiswa').value = child.id;
+          return renderProgressDetail();
+        }
+      }
+      document.getElementById('progressInfoKelas').innerHTML =
+        '<b>' + siswa.nama + '</b> • Kelas: <b>' + getKelasNama(siswa.kelasId) + '</b> • Wali Kelas: <b>' + getKelasWali(siswa.kelasId) + '</b>';
+
+      const bulanIni = getLocalMonthString();
+      let hadir = 0, totalHari = 0;
+      Object.keys(data.absensi).forEach(function(tgl) {
+        if (tgl.startsWith(bulanIni)) {
+          totalHari++;
+          if (data.absensi[tgl][siswaId] === 'H') hadir++;
+        }
+      });
+      document.getElementById('pHadir').textContent = (totalHari > 0 ? Math.round((hadir/totalHari)*100) : 0) + '%';
+
+      const tugasSiswa = data.tugas.filter(function(t) { return t.siswa_id === siswaId; });
+      document.getElementById('pTugas').textContent = tugasSiswa.length;
+      const nilaiList = tugasSiswa.filter(function(t) { return t.nilai !== null && t.nilai !== ''; }).map(function(t) { return Number(t.nilai); });
+      document.getElementById('pNilai').textContent = nilaiList.length ? Math.round(nilaiList.reduce(function(a,b){return a+b;},0)/nilaiList.length) : '-';
+      const catatanSiswa = data.catatan.filter(function(c) { return c.siswa_id === siswaId; });
+      document.getElementById('pCatatan').textContent = catatanSiswa.length;
+
+      const tugasList = document.getElementById('tugasList');
+      if (tugasSiswa.length === 0) {
+        tugasList.innerHTML = '<p class="text-gray-400 text-sm">Belum ada tugas yang diupload</p>';
+      } else {
+        let html = '';
+        tugasSiswa.slice().reverse().forEach(function(t) {
+          const imgHtml = t.fileData ? '<img src="' + t.fileData + '" class="preview-img w-20 h-20 cursor-pointer" onclick="showModal(this.src)">' : '<div class="w-20 h-20 bg-gray-200 rounded-lg flex items-center justify-center text-gray-400"><i class="fas fa-image"></i></div>';
+          const nilaiHtml = (t.nilai !== '' && t.nilai !== null) ? ' • Nilai: <b>' + t.nilai + '</b>' : '';
+          const catatanHtml = t.catatan ? '<p class="text-sm text-gray-600 mt-1">' + t.catatan + '</p>' : '';
+          html += '<div class="flex gap-3 p-3 bg-gray-50 rounded-lg border">' + imgHtml + '<div class="flex-1 min-w-0"><p class="font-medium text-gray-800 truncate">' + t.judul + '</p><p class="text-xs text-gray-500">' + t.tanggal + nilaiHtml + '</p>' + catatanHtml + '</div><button onclick="hapusTugas(' + t.id + ')" class="text-red-400 hover:text-red-600 self-start"><i class="fas fa-trash"></i></button></div>';
+        });
+        tugasList.innerHTML = html;
+      }
+
+      const catatanList = document.getElementById('catatanList');
+      if (catatanSiswa.length === 0) {
+        catatanList.innerHTML = '<p class="text-gray-400 text-sm">Belum ada catatan</p>';
+      } else {
+        let html = '';
+        catatanSiswa.slice().reverse().forEach(function(c) {
+          html += '<div class="flex justify-between items-start gap-2 p-2 bg-orange-50 rounded-lg text-sm"><div><p class="text-gray-800">' + c.teks + '</p><p class="text-xs text-gray-400 mt-0.5">' + c.tanggal + '</p></div><button onclick="hapusCatatan(' + c.id + ')" class="text-red-400 hover:text-red-600"><i class="fas fa-times"></i></button></div>';
+        });
+        catatanList.innerHTML = html;
+      }
+    }
+
+    function previewFile(input) {
+      const file = input.files[0];
+      if (!file) return;
+      if (file.size > 1024 * 1024) {
+        alert('Ukuran file maksimal 1MB.');
+        input.value = '';
+        return;
+      }
+      const reader = new FileReader();
+      reader.onload = function(e) {
+        currentFileData = e.target.result;
+        currentFileName = file.name;
+        document.getElementById('filePreview').src = currentFileData;
+        document.getElementById('filePreview').classList.remove('hidden');
+        document.getElementById('fileLabel').textContent = file.name;
+      };
+      reader.readAsDataURL(file);
+    }
+
+    function simpanTugas() {
+      const sid = document.getElementById('progressSiswa').value;
+      if (!sid) { alert('Pilih siswa dulu'); return; }
+      const judul = document.getElementById('tugasJudul').value.trim();
+      if (!judul) { alert('Isi judul tugas'); return; }
+      data.tugas.push({
+        id: Date.now(),
+        siswa_id: Number(sid),
+        judul: judul,
+        catatan: document.getElementById('tugasCatatan').value.trim(),
+        nilai: document.getElementById('tugasNilai').value,
+        tanggal: getLocalDateString(),
+        fileName: currentFileName || '',
+        fileData: currentFileData || null
+      });
+      save();
+      document.getElementById('tugasJudul').value = '';
+      document.getElementById('tugasCatatan').value = '';
+      document.getElementById('tugasNilai').value = '';
+      document.getElementById('tugasFile').value = '';
+      document.getElementById('filePreview').classList.add('hidden');
+      document.getElementById('fileLabel').textContent = 'Pilih foto tugas (JPG/PNG, max 1MB)';
+      currentFileData = null;
+      currentFileName = null;
+      renderProgressDetail();
+      updateStats();
+      const found = data.siswa.find(function(s) { return s.id === Number(sid); });
+      tambahAktivitas('Tugas diupload untuk ' + (found ? found.nama : '') + ': ' + judul);
+    }
+
+    function hapusTugas(id) {
+      if (!confirm('Hapus tugas ini?')) return;
+      data.tugas = data.tugas.filter(function(t) { return t.id !== id; });
+      save();
+      renderProgressDetail();
+      updateStats();
+    }
+
+    function tambahCatatan() {
+      const sid = document.getElementById('progressSiswa').value;
+      if (!sid) { alert('Pilih siswa dulu'); return; }
+      const teks = document.getElementById('catatanBaru').value.trim();
+      if (!teks) return;
+      data.catatan.push({ id: Date.now(), siswa_id: Number(sid), teks: teks, tanggal: new Date().toISOString().slice(0,10) });
+      save();
+      document.getElementById('catatanBaru').value = '';
+      renderProgressDetail();
+      tambahAktivitas('Catatan progress ditambahkan');
+    }
+
+    function hapusCatatan(id) {
+      data.catatan = data.catatan.filter(function(c) { return c.id !== id; });
+      save();
+      renderProgressDetail();
+    }
+
+    function showModal(src) {
+      document.getElementById('modalImg').src = src;
+      document.getElementById('imgModal').classList.remove('hidden');
+      document.getElementById('imgModal').classList.add('flex');
+    }
+
+    function closeModal() {
+      document.getElementById('imgModal').classList.add('hidden');
+      document.getElementById('imgModal').classList.remove('flex');
+    }
+
+    // ===== LAPORAN =====
+    function getMonthlyAchievementForStudent(studentId, bulan) {
+      const siswa = data.siswa.find(function(s){ return String(s.id) === String(studentId); });
+      if (!siswa) return 0;
+      const values = [];
+      (data.materi || []).forEach(function(m){
+        ensureMaterialModel(m);
+        if (!m.tanggal || !m.tanggal.startsWith(bulan)) return;
+        if (m.targetKelas && m.targetKelas !== siswa.kelasId) return;
+        const value = Number((m.pencapaian || {})[studentId] || 0);
+        values.push(Math.max(0, Math.min(100, value)));
+      });
+      return values.length ? Math.round(values.reduce(function(a,b){return a+b;},0) / values.length) : 0;
+    }
+
+    function getPredikatNilai(nilai){
+      const n=Number(nilai)||0;
+      if(n>=90)return 'A'; if(n>=80)return 'B'; if(n>=70)return 'C'; if(n>=60)return 'D'; return 'E';
+    }
+    function getPredikatLabel(nilai){
+      const p=getPredikatNilai(nilai);
+      return ({A:'Sangat Baik',B:'Baik',C:'Cukup',D:'Perlu Bimbingan',E:'Perlu Pendampingan'})[p];
+    }
+    function getMonthlyMaterialsForStudent(studentId, bulan){
+      return (data.materi||[]).filter(function(m){
+        if(!m.tanggal || !String(m.tanggal).startsWith(bulan)) return false;
+        const s=data.siswa.find(function(x){return String(x.id)===String(studentId);});
+        if(!s) return false;
+        return !m.targetKelas || String(m.targetKelas)===String(s.kelasId);
+      }).map(function(m){
+        const nilai=Number((m.pencapaian||{})[studentId]||0);
+        return {judul:m.judul||'Materi',tanggal:m.tanggal||'-',nilai:nilai,predikat:getPredikatNilai(nilai),label:getPredikatLabel(nilai)};
+      });
+    }
+    function renderLaporan(){
+      const bulanEl=document.getElementById('laporanBulan'); if(!bulanEl)return;
+      const bulan=bulanEl.value||getLocalMonthString(); bulanEl.value=bulan;
+      const filterEl=document.getElementById('filterKelasLaporan'); const filter=filterEl?filterEl.value:'';
+      let list=data.siswa||[]; if(filter) list=list.filter(function(s){return String(s.kelasId)===String(filter);});
+      const rekap={};
+      list.forEach(function(s){rekap[String(s.id)]={id:s.id,nama:s.nama,kelas:getKelasNama(s.kelasId),H:0,S:0,I:0,A:0,total:0};});
+      Object.keys(data.absensi||{}).forEach(function(tgl){
+        if(!tgl.startsWith(bulan))return;
+        Object.keys(data.absensi[tgl]||{}).forEach(function(sid){const r=rekap[String(sid)];if(!r)return;const st=data.absensi[tgl][sid];if(['H','S','I','A'].includes(st)){r[st]++;r.total++;}});
+      });
+      const rows=Object.values(rekap);
+      const tbody=document.getElementById('laporanBody');
+      tbody.innerHTML=rows.map(function(r,i){
+        const mats=getMonthlyMaterialsForStudent(r.id,bulan); const avg=mats.length?Math.round(mats.reduce(function(a,m){return a+m.nilai;},0)/mats.length):0; const hadir=r.total?Math.round(r.H/r.total*100):0;
+        return '<tr class="border-t hover:bg-gray-50">'+
+          '<td class="px-4 py-3">'+(i+1)+'</td><td class="px-4 py-3 font-medium">'+escapeHtml(r.nama)+'</td><td class="px-4 py-3">'+escapeHtml(r.kelas)+'</td>'+
+          '<td class="px-4 py-3 text-center text-green-600 font-medium">'+r.H+'</td><td class="px-4 py-3 text-center text-yellow-600">'+r.S+'</td><td class="px-4 py-3 text-center text-blue-600">'+r.I+'</td><td class="px-4 py-3 text-center text-red-600">'+r.A+'</td><td class="px-4 py-3 text-center">'+r.total+'</td><td class="px-4 py-3 text-center font-bold">'+hadir+'%</td><td class="px-4 py-3 text-center font-bold text-indigo-600">'+avg+'%</td></tr>';
+      }).join('')||'<tr><td colspan="10" class="px-4 py-6 text-center text-gray-400">Tidak ada data pada bulan ini.</td></tr>';
+      const totalHari=Object.keys(data.absensi||{}).filter(function(t){return t.startsWith(bulan);}).length;
+      const totalH=rows.reduce(function(a,r){return a+r.H;},0), totalS=rows.reduce(function(a,r){return a+r.S;},0), totalI=rows.reduce(function(a,r){return a+r.I;},0), totalA=rows.reduce(function(a,r){return a+r.A;},0);
+      const achVals=[]; rows.forEach(function(r){getMonthlyMaterialsForStudent(r.id,bulan).forEach(function(m){achVals.push(m.nilai);});});
+      const rataPencapaian=achVals.length?Math.round(achVals.reduce(function(a,b){return a+b;},0)/achVals.length):0;
+      const info=document.getElementById('laporanInfo'); if(info)info.textContent='Bulan '+getMonthName(bulan)+' • '+totalHari+' hari ada data • '+rows.length+' siswa • H:'+totalH+' S:'+totalS+' I:'+totalI+' A:'+totalA+' • Rata-rata pencapaian materi: '+rataPencapaian+'%';
+      const wrap=document.getElementById('raportSiswaList'); if(!wrap)return;
+      wrap.innerHTML=rows.map(function(r){
+        const mats=getMonthlyMaterialsForStudent(r.id,bulan); const avg=mats.length?Math.round(mats.reduce(function(a,m){return a+m.nilai;},0)/mats.length):0; const hadir=r.total?Math.round(r.H/r.total*100):0;
+        const materialRows=mats.map(function(m,idx){return '<tr><td class="num">'+(idx+1)+'</td><td>'+escapeHtml(m.judul)+'</td><td class="num">'+escapeHtml(m.tanggal)+'</td><td class="num"><strong>'+m.nilai+'</strong></td><td class="num"><span class="predikat">'+m.predikat+'</span> — '+m.label+'</td></tr>';}).join('');
+        return '<div class="raport-card"><div class="raport-head"><div><div class="raport-title">RAPOR PERKEMBANGAN SISWA</div><div class="raport-sub">Periode '+escapeHtml(getMonthName(bulan))+'</div></div><div class="text-right text-sm font-bold text-indigo-600">Rata-rata '+avg+'%</div></div>'+
+          '<div class="raport-identitas"><div><small>Nama Siswa</small><strong>'+escapeHtml(r.nama)+'</strong></div><div><small>Kelas</small><strong>'+escapeHtml(r.kelas)+'</strong></div><div><small>Periode</small><strong>'+escapeHtml(getMonthName(bulan))+'</strong></div></div>'+
+          '<div class="overflow-x-auto"><table class="raport-table"><thead><tr><th style="width:42px">No</th><th>Materi Pembelajaran</th><th style="width:110px">Tanggal</th><th style="width:80px">Nilai</th><th style="width:210px">Predikat</th></tr></thead><tbody>'+ (materialRows||'<tr><td colspan="5" class="num text-gray-400">Belum ada pencapaian materi pada periode ini.</td></tr>') +'</tbody></table></div>'+
+          '<div class="raport-footer"><div class="raport-summary"><h4>Rekap Kehadiran</h4><div class="raport-summary-row"><span>Hadir</span><strong>'+r.H+'</strong></div><div class="raport-summary-row"><span>Sakit</span><strong>'+r.S+'</strong></div><div class="raport-summary-row"><span>Izin</span><strong>'+r.I+'</strong></div><div class="raport-summary-row"><span>Alpha</span><strong>'+r.A+'</strong></div><div class="raport-summary-row"><span>Persentase Kehadiran</span><strong>'+hadir+'%</strong></div></div><div class="raport-summary"><h4>Ringkasan Pembelajaran</h4><div class="raport-summary-row"><span>Jumlah Materi</span><strong>'+mats.length+'</strong></div><div class="raport-summary-row"><span>Rata-rata Nilai</span><strong>'+avg+'</strong></div><div class="raport-summary-row"><span>Predikat Umum</span><strong>'+getPredikatNilai(avg)+' — '+getPredikatLabel(avg)+'</strong></div></div></div></div>';
+      }).join('')||'<div class="raport-empty">Belum ada siswa pada periode ini.</div>';
+    }
+
+    // ===== SISWA =====
+    function renderSiswa() {
+      const filterKelas = document.getElementById('filterKelasSiswa').value;
+      let list = data.siswa;
+      if (filterKelas) list = list.filter(function(s) { return s.kelasId === filterKelas; });
+
+      const tbody = document.getElementById('siswaBody');
+      let html = '';
+      list.forEach(function(s, i) {
+        html += '<tr class="border-t hover:bg-gray-50"><td class="px-4 py-3">' + (i+1) + '</td><td class="px-4 py-3 font-medium">' + s.nama + '</td><td class="px-4 py-3">' + getKelasNama(s.kelasId) + '</td><td class="px-4 py-3">' + s.ortu + '</td><td class="px-4 py-3 text-center"><button onclick="hapusSiswa(' + s.id + ')" class="text-red-400 hover:text-red-600 text-sm"><i class="fas fa-trash"></i></button></td></tr>';
+      });
+      tbody.innerHTML = html || '<tr><td colspan="5" class="px-4 py-6 text-center text-gray-400">Tidak ada siswa</td></tr>';
+      isiDropdownProgress();
+    }
+
+    function tambahSiswa() {
+  const nama = prompt("Masukkan nama siswa:");
+  if (nama === null) return;
+
+  const namaBersih = nama.trim();
+  if (namaBersih === "") {
+    alert("Nama siswa tidak boleh kosong.");
+    return;
+  }
+
+  // Cek nama yang sama
+  const sudahAda = data.siswa.some(s =>
+    s.nama.toLowerCase() === namaBersih.toLowerCase()
+  );
+
+  if (sudahAda) {
+    alert("Nama siswa sudah ada.");
+    return;
+  }
+
+  let pilihan = "Pilih kelas:\n\n";
+
+  data.kelas.forEach((k, i) => {
+    pilihan += `${i + 1}. ${k.nama}\n`;
+  });
+
+  const pilih = prompt(pilihan + "\nMasukkan nomor kelas:");
+
+  if (pilih === null) return;
+
+  const index = parseInt(pilih, 10) - 1;
+
+  if (isNaN(index) || index < 0 || index >= data.kelas.length) {
+    alert("Kelas tidak valid.");
+    return;
+  }
+
+  const ortu = prompt("Nama orang tua:") || "-";
+
+  const siswaBaru = {
+    id: Date.now() + Math.floor(Math.random() * 1000),
+    nama: namaBersih,
+    kelasId: data.kelas[index].id,
+    ortu: ortu.trim() || "-"
+  };
+
+  data.siswa.push(siswaBaru);
+
+  refreshAllViews();
+  save();
+
+  renderSiswa();
+  renderKelas();
+  renderAbsensi();
+  renderLaporan();
+  updateStats();
+
+  tambahAktivitas(
+    "Siswa baru: " +
+    siswaBaru.nama +
+    " (" +
+    getKelasNama(siswaBaru.kelasId) +
+    ")"
+  );
+
+  alert("Siswa berhasil ditambahkan.");
+}
+
+    function hapusSiswa(id) {
+      if (!confirm('Hapus siswa ini?')) return;
+      data.siswa = data.siswa.filter(function(s) { return s.id !== id; });
+      save();
+      renderSiswa();
+      renderKelas();
+      updateStats();
+    }
+
+    function tambahAktivitas(teks) {
+      data.aktivitas.unshift({ waktu: new Date().toLocaleTimeString('id-ID'), teks: teks });
+      if (data.aktivitas.length > 15) data.aktivitas.pop();
+      save();
+      renderAktivitas();
+    }
+
+    function renderAktivitas() {
+      const el = document.getElementById('aktivitasList');
+      if (data.aktivitas.length === 0) {
+        el.innerHTML = '<p class="text-gray-400">Belum ada aktivitas</p>';
+        return;
+      }
+      let html = '';
+      data.aktivitas.forEach(function(a) {
+        html += '<div class="flex gap-2"><span class="text-gray-400 text-xs w-16">' + a.waktu + '</span><span>' + a.teks + '</span></div>';
+      });
+      el.innerHTML = html;
+    }
+
+    async function exportPDFReport(){
+      if(!window.jspdf||!window.jspdf.jsPDF){alert('Library PDF belum berhasil dimuat. Pastikan perangkat terhubung ke internet, lalu coba lagi.');return;}
+      const bulanEl=document.getElementById('laporanBulan'); const bulan=(bulanEl&&bulanEl.value)||getLocalMonthString();
+      const filterEl=document.getElementById('filterKelasLaporan'); const filter=filterEl?filterEl.value:'';
+      let students=(data.siswa||[]).slice(); if(filter)students=students.filter(function(s){return String(s.kelasId)===String(filter);});
+      const {jsPDF}=window.jspdf; const doc=new jsPDF({orientation:'portrait',unit:'mm',format:'a4'}); const W=doc.internal.pageSize.getWidth(),H=doc.internal.pageSize.getHeight(),M=15;
+      function footer(){doc.setFont('helvetica','normal');doc.setFontSize(7);doc.setTextColor(120);doc.text('Absensi & Belajar',M,H-8);doc.text('Halaman '+doc.internal.getNumberOfPages(),W-M,H-8,{align:'right'});}
+      function pageTitle(){doc.setFont('helvetica','bold');doc.setFontSize(16);doc.setTextColor(25,35,55);doc.text('RAPOR PERKEMBANGAN SISWA',W/2,17,{align:'center'});doc.setFont('helvetica','normal');doc.setFontSize(9);doc.setTextColor(90);doc.text('Periode: '+getMonthName(bulan),W/2,23,{align:'center'});}
+      function pred(n){return getPredikatNilai(n)+' - '+getPredikatLabel(n);}
+      students.forEach(function(s,idx){
+        if(idx>0)doc.addPage(); pageTitle(); let y=31;
+        const kelas=getKelasNama(s.kelasId); const mats=getMonthlyMaterialsForStudent(s.id,bulan);
+        let Hc=0,Sc=0,Ic=0,Ac=0,total=0; Object.keys(data.absensi||{}).forEach(function(t){if(!t.startsWith(bulan))return;const st=(data.absensi[t]||{})[s.id];if(['H','S','I','A'].includes(st)){if(st==='H')Hc++;if(st==='S')Sc++;if(st==='I')Ic++;if(st==='A')Ac++;total++;}});
+        const hadir=total?Math.round(Hc/total*100):0; const avg=mats.length?Math.round(mats.reduce(function(a,m){return a+m.nilai;},0)/mats.length):0;
+        doc.setDrawColor(220,224,230);doc.roundedRect(M,y,W-2*M,24,3,3);doc.setFont('helvetica','bold');doc.setFontSize(10);doc.setTextColor(40);doc.text('Identitas Siswa',M+5,y+7);doc.setFont('helvetica','normal');doc.setFontSize(9);doc.text('Nama: '+s.nama,M+5,y+14);doc.text('Kelas: '+kelas,M+5,y+20);doc.text('Periode: '+getMonthName(bulan),W/2,y+14);doc.text('Rata-rata: '+avg+' ('+pred(avg)+')',W/2,y+20);y+=31;
+        doc.setFont('helvetica','bold');doc.setFontSize(11);doc.setTextColor(30);doc.text('A. Pencapaian Materi Pembelajaran',M,y);y+=5;
+        const widths=[8,72,24,20,51]; const headers=['No','Materi','Tanggal','Nilai','Predikat']; let x=M;doc.setFontSize(7);headers.forEach(function(h,i){doc.setFillColor(238,242,255);doc.setDrawColor(210);doc.rect(x,y,widths[i],7,'FD');doc.setFont('helvetica','bold');doc.text(h,x+widths[i]/2,y+4.6,{align:'center'});x+=widths[i];});y+=7;
+        if(!mats.length){doc.setFont('helvetica','normal');doc.setFontSize(9);doc.text('Belum ada pencapaian materi pada periode ini.',M,y+6);y+=14;} else mats.forEach(function(m,i){if(y>H-48){footer();doc.addPage();y=18;}let vals=[String(i+1),m.judul,m.tanggal,String(m.nilai),pred(m.nilai)];x=M;vals.forEach(function(v,j){doc.setDrawColor(225);doc.rect(x,y,widths[j],7);doc.setFont('helvetica',j===3?'bold':'normal');doc.setFontSize(7);let t=String(v);if(j===1&&t.length>32)t=t.slice(0,31)+'…';if(j===1)doc.text(t,x+2,y+4.6);else doc.text(t,x+widths[j]/2,y+4.6,{align:'center'});x+=widths[j];});y+=7;});
+        y+=9;if(y>H-52){footer();doc.addPage();y=18;}doc.setFont('helvetica','bold');doc.setFontSize(11);doc.text('B. Rekap Kehadiran',M,y);y+=5;
+        const aw=[30,30,30,30,70];const av=[['Hadir',Hc],['Sakit',Sc],['Izin',Ic],['Alpha',Ac],['Persentase Kehadiran',hadir+'%']];x=M;av.forEach(function(v,i){doc.setFillColor(248,250,252);doc.setDrawColor(220);doc.rect(x,y,aw[i],12,'FD');doc.setFont('helvetica','normal');doc.setFontSize(7);doc.text(v[0],x+3,y+5);doc.setFont('helvetica','bold');doc.setFontSize(9);doc.text(String(v[1]),x+3,y+10);x+=aw[i];});y+=19;
+        doc.setFont('helvetica','bold');doc.setFontSize(11);doc.text('C. Ringkasan Perkembangan',M,y);y+=6;doc.setFont('helvetica','normal');doc.setFontSize(9);doc.text('Jumlah materi: '+mats.length,M,y);doc.text('Rata-rata pencapaian: '+avg,M+65,y);doc.text('Predikat: '+pred(avg),M+135,y);y+=10;doc.setFontSize(8);doc.setTextColor(100);doc.text('Catatan guru/wali kelas: ................................................................................................................',M,y);doc.text('................................................................................................................................................',M,y+7);footer();
+      });
+      const safeMonth=bulan.replace(/[^0-9-]/g,'');const safeClass=(filter?getKelasNama(filter):'semua-kelas').replace(/[^a-zA-Z0-9]+/g,'-').replace(/^-|-$/g,'').toLowerCase()||'semua-kelas';doc.save('rapor-siswa-'+safeMonth+'-'+safeClass+'.pdf');
+    }
+
+    function importData(event) {
+      const file = event.target.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = function(e) {
+        try {
+          const imported = JSON.parse(e.target.result);
+          if (!imported.siswa) { alert('File tidak valid'); return; }
+          if (confirm('Import akan menimpa data yang ada.\nLanjutkan?')) {
+            data.siswa = imported.siswa || [];
+            data.kelas = imported.kelas || JSON.parse(JSON.stringify(KELAS_DEFAULT));
+            data.absensi = imported.absensi || {};
+            data.materi = imported.materi || [];
+            data.tugas = imported.tugas || [];
+            data.catatan = imported.catatan || [];
+            data.aktivitas = imported.aktivitas || [];
+            save();
+            isiFilterKelas();
+            renderAbsensi();
+            renderMateri();
+            renderSiswa();
+            renderKelas();
+            renderAktivitas();
+            renderLaporan();
+            isiDropdownProgress();
+            updateStats();
+            alert('Data berhasil di-import!');
+          }
+        } catch (err) {
+          alert('Gagal membaca file: ' + err.message);
+        }
+      };
+      reader.readAsText(file);
+      event.target.value = '';
+    }
+
+    // Inisialisasi: jika session server masih valid, lanjutkan ke aplikasi.
+    // Jika tidak ada session, form login tetap ditampilkan. localStorage tidak
+    // pernah dipakai sebagai bukti autentikasi.
+    document.getElementById('app').classList.add('hidden');
+    document.getElementById('loginPage').classList.remove('hidden');
+    serverAuthenticated = false;
+    csrfToken = '';
+    checkServerSession();
+  </script>
+</body>
+</html>
