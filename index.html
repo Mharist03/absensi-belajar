@@ -384,9 +384,23 @@
 
       <!-- KELAS -->
       <div id="tab-kelas" class="tab-content hidden">
-        <h2 class="text-xl font-bold text-gray-800 mb-4">Daftar Kelas & Wali Kelas</h2>
-        <div id="kelasList" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4"></div>
-        <p class="text-xs text-gray-400 mt-4">Untuk mengubah nama wali kelas, edit di tab ini (klik tombol Edit).</p>
+        <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-5">
+          <div>
+            <h2 class="text-xl font-bold text-gray-800">Daftar Kelas & Wali Kelas</h2>
+            <p class="text-sm text-gray-500 mt-1">Kelola kelas, wali kelas, dan lihat daftar siswa setiap kelas.</p>
+          </div>
+          <button onclick="tambahKelas()" class="px-4 py-2.5 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 font-medium">
+            <i class="fas fa-plus mr-2"></i>Tambah Kelas
+          </button>
+        </div>
+
+        <div id="kelasList" class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4"></div>
+
+        <div id="kelasDetail" class="hidden mt-6 bg-white rounded-xl border shadow-sm p-5"></div>
+
+        <p class="text-xs text-gray-400 mt-4">
+          Setiap kelas dapat diedit, dihapus, dan dilihat detail siswanya.
+        </p>
       </div>
 
       <!-- SISWA -->
@@ -394,8 +408,12 @@
         <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
           <h2 class="text-xl font-bold text-gray-800">Daftar Siswa</h2>
           <div class="flex flex-wrap gap-2">
+            <input id="cariSiswa" type="search" placeholder="Cari nama siswa..." class="px-3 py-2 border rounded-lg text-sm min-w-[180px]" oninput="renderSiswa()">
             <select id="filterKelasSiswa" class="px-3 py-2 border rounded-lg text-sm" onchange="renderSiswa()">
               <option value="">Semua Kelas</option>
+            </select>
+            <select id="filterGenderSiswa" class="px-3 py-2 border rounded-lg text-sm" onchange="renderSiswa()">
+              <option value="">Semua Jenis Kelamin</option><option value="Laki-laki">Laki-laki</option><option value="Perempuan">Perempuan</option>
             </select>
             <button onclick="tambahSiswa()" class="bg-indigo-600 hover:bg-indigo-700 text-white text-sm px-4 py-2 rounded-lg">
               <i class="fas fa-user-plus mr-1"></i> Tambah Siswa
@@ -503,9 +521,12 @@
       <h3 class="text-lg font-bold text-gray-800 mb-4">Tambah Materi Pembelajaran</h3>
       <div class="space-y-3">
         <div>
-          <label class="block text-sm font-medium text-gray-700 mb-1">Mata Pelajaran</label>
-          <input id="materiMapel" type="text" placeholder="Contoh: Matematika" class="w-full px-3 py-2 border rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 outline-none">
+          <label class="block text-sm font-medium text-gray-700 mb-1">Kategori Materi</label>
+          <select id="materiMapel" onchange="updateMaterialFields()" class="w-full px-3 py-2 border rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 outline-none">
+            <option value="Bacaan - Tilawati">📖 Bacaan - Tilawati</option><option value="Bacaan - Al-Qur'an">📖 Bacaan - Al-Qur'an</option><option value="Pegon">✍️ Pegon</option><option value="Akhlak">🌟 Akhlak</option><option value="Doa-Doa">🤲 Doa-Doa</option><option value="Hafalan Surat">📖 Hafalan Surat</option>
+          </select>
         </div>
+        <div id="materialSpecificFields"></div>
         <div>
           <label class="block text-sm font-medium text-gray-700 mb-1">Judul Materi</label>
           <input id="materiJudul" type="text" placeholder="Contoh: Operasi Bilangan" class="w-full px-3 py-2 border rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 outline-none">
@@ -1181,8 +1202,20 @@
       const tgl = (tanggalEl && tanggalEl.value) || getLocalDateString();
       const filterKelas = filterEl ? filterEl.value : '';
       if (!data.absensi[tgl]) data.absensi[tgl] = {};
-      let list = data.siswa;
-      if (filterKelas) list = list.filter(function(s) { return s.kelasId === filterKelas; });
+      // Ambil data siswa lalu urutkan berdasarkan nama A-Z
+      let list = Array.isArray(data.siswa) ? [...data.siswa] : [];
+      if (filterKelas) {
+        list = list.filter(function(s) { return s.kelasId === filterKelas; });
+      }
+
+      // Urutan nama menggunakan locale Indonesia agar daftar absensi selalu A-Z
+      list.sort(function(a, b) {
+        return String(a.nama || '').localeCompare(
+          String(b.nama || ''),
+          'id',
+          { sensitivity: 'base', numeric: true }
+        );
+      });
 
       const tbody = document.getElementById('absensiBody');
       let html = '';
@@ -1290,13 +1323,191 @@
 
     // ===== KELAS =====
     function renderKelas() {
-      const container=document.getElementById('kelasList'); if(!container)return;
-      container.innerHTML=(data.kelas||[]).map(function(k){
-        const jumlah=(data.siswa||[]).filter(function(s){return String(s.kelasId)===String(k.id);}).length;
-        const photo=k.guruFoto?'<img src="'+k.guruFoto+'" class="w-12 h-12 rounded-xl object-cover border">':'<div class="w-12 h-12 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center font-bold">'+escapeHtml(getInitials(k.wali))+'</div>';
-        return '<div class="bg-white rounded-xl shadow-sm border p-5"><div class="flex items-start justify-between gap-3"><div class="flex gap-3">'+photo+'<div><h3 class="font-bold text-lg text-gray-800">'+escapeHtml(k.nama)+'</h3><p class="text-sm text-gray-500 mt-1"><i class="fas fa-user-tie mr-1"></i>Wali: <b>'+escapeHtml(k.wali||'-')+'</b></p><p class="text-sm text-gray-500 mt-1"><i class="fas fa-users mr-1"></i>'+jumlah+' siswa</p></div></div><button onclick="openTeacherProfile(\''+escapeHtml(k.id)+'\')" class="text-indigo-600 hover:text-indigo-800 text-sm"><i class="fas fa-edit"></i> Edit</button></div></div>';
+      const container = document.getElementById('kelasList');
+      if (!container) return;
+
+      // Perbaikan: jika data kelas kosong/terhapus, pulihkan struktur kelas default
+      if (!Array.isArray(data.kelas) || data.kelas.length === 0) {
+        data.kelas = JSON.parse(JSON.stringify(KELAS_DEFAULT));
+      }
+
+      // Urutkan kelas berdasarkan nama agar konsisten
+      const kelasList = [...data.kelas].sort(function(a, b) {
+        return String(a.nama || '').localeCompare(String(b.nama || ''), 'id', { sensitivity: 'base' });
+      });
+
+      if (kelasList.length === 0) {
+        container.innerHTML = '<div class="md:col-span-2 xl:col-span-3 text-center py-12 bg-white rounded-xl border">'
+          + '<i class="fas fa-school text-4xl text-gray-300 mb-3"></i>'
+          + '<p class="font-semibold text-gray-600">Belum ada kelas.</p>'
+          + '<p class="text-sm text-gray-400 mt-1">Klik tombol Tambah Kelas untuk membuat kelas baru.</p>'
+          + '</div>';
+        return;
+      }
+
+      container.innerHTML = kelasList.map(function(k) {
+        const siswaKelas = (data.siswa || []).filter(function(s) {
+          return String(s.kelasId) === String(k.id);
+        });
+
+        const jumlah = siswaKelas.length;
+        const wali = k.wali || '-';
+        const photo = k.guruFoto
+          ? '<img src="' + k.guruFoto + '" class="w-14 h-14 rounded-xl object-cover border" alt="Foto wali kelas">'
+          : '<div class="w-14 h-14 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center font-bold text-lg">'
+              + escapeHtml(getInitials(wali)) + '</div>';
+
+        return '<div class="bg-white rounded-xl shadow-sm border p-5 hover:shadow-md transition">'
+          + '<div class="flex items-start justify-between gap-3">'
+          + '<div class="flex gap-3 min-w-0">'
+          + photo
+          + '<div class="min-w-0">'
+          + '<h3 class="font-bold text-lg text-gray-800 truncate">' + escapeHtml(k.nama || 'Tanpa Nama') + '</h3>'
+          + '<p class="text-sm text-gray-500 mt-1"><i class="fas fa-user-tie mr-1 text-indigo-500"></i> Wali: <b>' + escapeHtml(wali) + '</b></p>'
+          + '<p class="text-sm text-gray-500 mt-1"><i class="fas fa-users mr-1 text-indigo-500"></i> ' + jumlah + ' siswa</p>'
+          + '</div></div>'
+          + '<span class="px-2 py-1 rounded-full bg-indigo-50 text-indigo-600 text-xs font-semibold">Aktif</span>'
+          + '</div>'
+
+          + '<div class="grid grid-cols-3 gap-2 mt-5 pt-4 border-t">'
+          + '<button onclick="lihatDetailKelas(\'' + escapeHtml(String(k.id)) + '\')" class="py-2 text-sm rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-50"><i class="fas fa-eye"></i> Detail</button>'
+          + '<button onclick="editKelas(\'' + escapeHtml(String(k.id)) + '\')" class="py-2 text-sm rounded-lg border border-indigo-200 text-indigo-600 hover:bg-indigo-50"><i class="fas fa-edit"></i> Edit</button>'
+          + '<button onclick="hapusKelas(\'' + escapeHtml(String(k.id)) + '\')" class="py-2 text-sm rounded-lg border border-red-200 text-red-600 hover:bg-red-50"><i class="fas fa-trash"></i> Hapus</button>'
+          + '</div>'
+          + '</div>';
       }).join('');
     }
+
+    function tambahKelas() {
+      const nama = prompt('Masukkan nama kelas baru:');
+      if (!nama || !nama.trim()) return;
+
+      const wali = prompt('Masukkan nama wali kelas (boleh dikosongkan):') || '';
+      const id = 'kelas_' + Date.now();
+
+      if (!Array.isArray(data.kelas)) data.kelas = [];
+      data.kelas.push({
+        id: id,
+        nama: nama.trim(),
+        wali: wali.trim()
+      });
+
+      persistLocalSnapshot();
+      saveNow().catch(function(){});
+      renderKelas();
+      alert('Kelas berhasil ditambahkan.');
+    }
+
+    function editKelas(kelasId) {
+      const k = (data.kelas || []).find(function(item) {
+        return String(item.id) === String(kelasId);
+      });
+      if (!k) return alert('Data kelas tidak ditemukan.');
+
+      const namaBaru = prompt('Nama kelas:', k.nama || '');
+      if (namaBaru === null) return;
+      if (!namaBaru.trim()) return alert('Nama kelas tidak boleh kosong.');
+
+      const waliBaru = prompt('Nama wali kelas:', k.wali || '');
+      if (waliBaru === null) return;
+
+      k.nama = namaBaru.trim();
+      k.wali = waliBaru.trim();
+
+      persistLocalSnapshot();
+      saveNow().catch(function(){});
+      renderKelas();
+
+      const detail = document.getElementById('kelasDetail');
+      if (detail && !detail.classList.contains('hidden')) lihatDetailKelas(k.id);
+      alert('Data kelas berhasil diperbarui.');
+    }
+
+    function hapusKelas(kelasId) {
+      const k = (data.kelas || []).find(function(item) {
+        return String(item.id) === String(kelasId);
+      });
+      if (!k) return;
+
+      const jumlahSiswa = (data.siswa || []).filter(function(s) {
+        return String(s.kelasId) === String(kelasId);
+      }).length;
+
+      const pesan = jumlahSiswa > 0
+        ? 'Kelas "' + k.nama + '" memiliki ' + jumlahSiswa + ' siswa. Siswa tidak akan dihapus, tetapi kelasnya akan dikosongkan. Lanjutkan?'
+        : 'Yakin ingin menghapus kelas "' + k.nama + '"?';
+
+      if (!confirm(pesan)) return;
+
+      data.kelas = data.kelas.filter(function(item) {
+        return String(item.id) !== String(kelasId);
+      });
+
+      (data.siswa || []).forEach(function(s) {
+        if (String(s.kelasId) === String(kelasId)) s.kelasId = '';
+      });
+
+      persistLocalSnapshot();
+      saveNow().catch(function(){});
+      renderKelas();
+
+      const detail = document.getElementById('kelasDetail');
+      if (detail) detail.classList.add('hidden');
+      alert('Kelas berhasil dihapus.');
+    }
+
+    function lihatDetailKelas(kelasId) {
+      const k = (data.kelas || []).find(function(item) {
+        return String(item.id) === String(kelasId);
+      });
+      if (!k) return;
+
+      const detail = document.getElementById('kelasDetail');
+      if (!detail) return;
+
+      const siswa = (data.siswa || [])
+        .filter(function(s) { return String(s.kelasId) === String(kelasId); })
+        .sort(function(a, b) {
+          return String(a.nama || '').localeCompare(String(b.nama || ''), 'id', { sensitivity: 'base' });
+        });
+
+      const materi = (data.materi || []).filter(function(m) {
+        return String(m.kelasId || m.kelas || '') === String(kelasId)
+          || String(m.kelas || '') === String(k.nama || '');
+      });
+
+      detail.classList.remove('hidden');
+      detail.innerHTML =
+        '<div class="flex items-start justify-between gap-3 mb-4">'
+        + '<div><h3 class="text-lg font-bold text-gray-800">Detail Kelas: ' + escapeHtml(k.nama) + '</h3>'
+        + '<p class="text-sm text-gray-500 mt-1">Wali Kelas: <b>' + escapeHtml(k.wali || '-') + '</b></p></div>'
+        + '<button onclick="document.getElementById(\'kelasDetail\').classList.add(\'hidden\')" class="text-gray-400 hover:text-gray-700"><i class="fas fa-times text-lg"></i></button>'
+        + '</div>'
+
+        + '<div class="grid grid-cols-1 md:grid-cols-2 gap-5">'
+        + '<div><h4 class="font-semibold text-gray-700 mb-3"><i class="fas fa-users mr-2 text-indigo-600"></i>Daftar Siswa (' + siswa.length + ')</h4>'
+        + (siswa.length
+          ? '<div class="space-y-2">' + siswa.map(function(s, i) {
+              return '<div class="flex items-center justify-between border rounded-lg px-3 py-2">'
+                + '<span><b>' + (i + 1) + '.</b> ' + escapeHtml(s.nama || '-') + '</span>'
+                + '<span class="text-xs text-gray-400">' + escapeHtml(s.ortu || '-') + '</span>'
+                + '</div>';
+            }).join('') + '</div>'
+          : '<p class="text-sm text-gray-400">Belum ada siswa di kelas ini.</p>')
+        + '</div>'
+
+        + '<div><h4 class="font-semibold text-gray-700 mb-3"><i class="fas fa-book mr-2 text-indigo-600"></i>Materi Kelas (' + materi.length + ')</h4>'
+        + (materi.length
+          ? '<div class="space-y-2">' + materi.map(function(m) {
+              return '<div class="border rounded-lg px-3 py-2"><b>' + escapeHtml(m.judul || m.nama || 'Materi') + '</b>'
+                + '<div class="text-xs text-gray-400 mt-1">' + escapeHtml(m.kategori || '-') + '</div></div>';
+            }).join('') + '</div>'
+          : '<p class="text-sm text-gray-400">Belum ada materi yang ditambahkan untuk kelas ini.</p>')
+        + '</div></div>';
+
+      detail.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }
+
     function openTeacherProfile(kelasId){
       const k=getKelasObj(kelasId);if(!k)return;
       document.getElementById('teacherKelasId').value=k.id;document.getElementById('teacherNama').value=k.wali||'';document.getElementById('teacherWa').value=k.guruWa||'';document.getElementById('teacherAlamat').value=k.guruAlamat||'';document.getElementById('teacherTempatLahir').value=k.guruTempatLahir||'';document.getElementById('teacherTanggalLahir').value=k.guruTanggalLahir||'';document.getElementById('teacherGender').value=k.guruGender||'';document.getElementById('teacherJabatan').value=k.guruJabatan||'Guru / Wali Kelas';document.getElementById('teacherPhotoInput').value='';pendingTeacherPhoto=k.guruFoto||'';setTeacherPhotoPreview(pendingTeacherPhoto,k.wali);
@@ -1800,5 +2011,142 @@
     csrfToken = '';
     checkServerSession();
   </script>
+
+<!-- ===== PENYEMPURNAAN FITUR GURU, SISWA & MATERI ===== -->
+<script>
+(function(){
+  function ensureGuruModel(){
+    if(!Array.isArray(data.guru)) data.guru=[];
+    (data.kelas||[]).forEach(function(k){
+      var g=data.guru.find(function(x){return String(x.id)===String(k.waliId);});
+      if(!g && k.wali){
+        g=data.guru.find(function(x){return String(x.nama).toLowerCase()===String(k.wali).toLowerCase();});
+        if(!g){g={id:Date.now()+Math.floor(Math.random()*9999),nama:k.wali,jabatan:k.guruJabatan||'Guru / Wali Kelas',foto:k.guruFoto||'',tempatLahir:k.guruTempatLahir||'',tanggalLahir:k.guruTanggalLahir||'',gender:k.guruGender||'',wa:k.guruWa||'',alamat:k.guruAlamat||''};data.guru.push(g);}
+        k.waliId=g.id;
+      }
+      if(g){k.wali=g.nama;k.guruFoto=g.foto||'';k.guruJabatan=g.jabatan||'Guru / Wali Kelas';}
+    });
+  }
+  ensureGuruModel();
+
+  window.renderSiswa=function(){
+    var kelas=document.getElementById('filterKelasSiswa');var gender=document.getElementById('filterGenderSiswa');var cari=document.getElementById('cariSiswa');
+    var fk=kelas?kelas.value:'', fg=gender?gender.value:'', q=(cari?cari.value:'').trim().toLowerCase();
+    var list=(data.siswa||[]).filter(function(s){return (!fk||String(s.kelasId)===String(fk))&&(!fg||String(s.gender||'')===fg)&&(!q||String(s.nama||'').toLowerCase().includes(q));});
+    var tbody=document.getElementById('siswaBody');if(!tbody)return;
+    tbody.innerHTML=list.map(function(s,i){return '<tr class="border-t hover:bg-indigo-50/40"><td class="px-4 py-3">'+(i+1)+'</td><td class="px-4 py-2">'+studentPhotoHtml(s,'w-12 h-12')+'</td><td class="px-4 py-3"><b>'+escapeHtml(s.nama)+'</b><div class="text-xs text-gray-400">'+escapeHtml(s.gender||'Jenis kelamin belum diisi')+'</div></td><td class="px-4 py-3">'+escapeHtml(getKelasNama(s.kelasId))+'</td><td class="px-4 py-3">'+escapeHtml(s.ortu||'-')+'</td><td class="px-4 py-3 text-center whitespace-nowrap"><button title="Edit data dan foto" onclick="openStudentProfile('+s.id+')" class="text-indigo-600 hover:text-indigo-800 mr-3 px-2 py-1"><i class="fas fa-pen"></i></button><button title="Hapus siswa" onclick="hapusSiswa('+s.id+')" class="text-red-500 hover:text-red-700 px-2 py-1"><i class="fas fa-trash"></i></button></td></tr>';}).join('')||'<tr><td colspan="6" class="p-6 text-center text-gray-400">Data siswa tidak ditemukan.</td></tr>';
+  };
+
+  window.updateMaterialFields=function(){
+    var c=document.getElementById('materiMapel');var host=document.getElementById('materialSpecificFields');if(!c||!host)return;var v=c.value;
+    if(v==='Bacaan - Tilawati') host.innerHTML='<div class="grid grid-cols-2 gap-3"><div><label class="text-sm font-medium">Jilid</label><select id="tilawatiJilid" class="w-full px-3 py-2 border rounded-lg"><option value="1">Jilid 1</option><option value="2">Jilid 2</option><option value="3">Jilid 3</option><option value="4">Jilid 4</option><option value="5">Jilid 5</option><option value="6">Jilid 6</option></select></div><div><label class="text-sm font-medium">Halaman (1–44)</label><input id="tilawatiHalaman" type="number" min="1" max="44" value="1" class="w-full px-3 py-2 border rounded-lg"></div></div>';
+    else if(v==='Bacaan - Al-Qur\'an') host.innerHTML='<div class="grid grid-cols-2 gap-3"><div><label class="text-sm font-medium">Nama Surat</label><input id="quranSurat" class="w-full px-3 py-2 border rounded-lg" placeholder="Contoh: Al-Baqarah"></div><div><label class="text-sm font-medium">Ayat</label><input id="quranAyat" class="w-full px-3 py-2 border rounded-lg" placeholder="Contoh: 1–10"></div></div>';
+    else if(v==='Doa-Doa') host.innerHTML='<label class="text-sm font-medium">Nama Doa</label><input id="doaNama" class="w-full px-3 py-2 border rounded-lg" placeholder="Contoh: Doa Sebelum Belajar">';
+    else if(v==='Hafalan Surat') host.innerHTML='<label class="text-sm font-medium">Nama Surat yang Dihafal</label><input id="hafalanSurat" class="w-full px-3 py-2 border rounded-lg" placeholder="Contoh: Al-Ikhlas">';
+    else host.innerHTML='';
+  };
+  function materialTitle(){var v=document.getElementById('materiMapel').value;if(v==='Bacaan - Tilawati'){var j=document.getElementById('tilawatiJilid'),h=document.getElementById('tilawatiHalaman');return 'Tilawati Jilid '+(j?j.value:'')+' — Halaman '+(h?h.value:'');}if(v==='Bacaan - Al-Qur\'an'){return 'Al-Qur\'an — '+(document.getElementById('quranSurat')?.value||'')+' Ayat '+(document.getElementById('quranAyat')?.value||'');}if(v==='Doa-Doa')return document.getElementById('doaNama')?.value||'';if(v==='Hafalan Surat')return document.getElementById('hafalanSurat')?.value||'';return document.getElementById('materiJudul')?.value||'';}
+  var oldTambah=tambahMateri;
+  window.tambahMateri=function(){oldTambah();setTimeout(function(){var e=document.getElementById('materiMapel');if(e){e.value='Bacaan - Tilawati';updateMaterialFields();}document.getElementById('materiEditId')?.remove();},0);};
+  window.saveMateri=async function(){var edit=document.getElementById('materiEditId');var id=edit?edit.value:'';var mapel=document.getElementById('materiMapel').value;var judul=materialTitle().trim();var deskripsi=document.getElementById('materiDeskripsi').value.trim();var tanggal=document.getElementById('materiTanggal').value||getLocalDateString();var targetKelas=document.getElementById('materiKelas').value||'';if(!judul||!targetKelas){alert('Lengkapi materi dan kelas tujuan.');return;}var m=id?data.materi.find(function(x){return String(x.id)===String(id);}):null;if(!m){m={id:Date.now(),pencapaian:{}};data.materi.push(m);data.siswa.forEach(function(s){m.pencapaian[s.id]=0;});}m.mapel=mapel;m.judul=judul;m.deskripsi=deskripsi;m.tanggal=tanggal;m.targetKelas=targetKelas;m.status=m.status||'belum';refreshAllViews();closeMateriModal();await save();};
+  window.editMateri=function(id){var m=data.materi.find(function(x){return String(x.id)===String(id);});if(!m)return;tambahMateri();setTimeout(function(){var hidden=document.createElement('input');hidden.type='hidden';hidden.id='materiEditId';hidden.value=m.id;document.getElementById('materiModal').querySelector('.bg-white').appendChild(hidden);document.getElementById('materiMapel').value=m.mapel||'Pegon';document.getElementById('materiJudul').value=m.judul||'';document.getElementById('materiDeskripsi').value=m.deskripsi||'';document.getElementById('materiTanggal').value=m.tanggal||getLocalDateString();document.getElementById('materiKelas').value=m.targetKelas||'';updateMaterialFields();},50);};
+  window.renderMateri=function(){var list=document.getElementById('materiList');if(!list)return;var filter=document.getElementById('filterKelasMateri');if(filter){var pv=filter.value;filter.innerHTML='<option value="">Semua Kelas</option>'+data.kelas.map(function(k){return '<option value="'+escapeHtml(k.id)+'">'+escapeHtml(k.nama)+'</option>';}).join('');filter.value=pv;}var fk=filter?filter.value:'';var arr=data.materi.filter(function(m){return !fk||String(m.targetKelas)===String(fk);});list.innerHTML=arr.length?arr.slice().sort(function(a,b){return (b.tanggal||'').localeCompare(a.tanggal||'');}).map(function(m){var avg=materialAverage(m),target=m.targetKelas?getKelasNama(m.targetKelas):'Semua Kelas';return '<div class="bg-white rounded-xl shadow-sm border p-5 mb-3"><div class="flex flex-col md:flex-row md:justify-between gap-3"><div><div class="flex flex-wrap gap-2"><span class="text-xs bg-indigo-100 text-indigo-700 px-2 py-1 rounded-full">'+escapeHtml(m.mapel)+'</span><span class="text-xs bg-gray-100 px-2 py-1 rounded-full">'+escapeHtml(target)+'</span></div><h3 class="font-semibold text-gray-800 mt-2">'+escapeHtml(m.judul)+'</h3><p class="text-sm text-gray-600 mt-1">'+escapeHtml(m.deskripsi||'-')+'</p></div><div class="flex gap-2"><button onclick="openPencapaianModal('+m.id+')" class="px-3 py-2 text-xs rounded-lg bg-indigo-50 text-indigo-700">Pencapaian</button><button onclick="editMateri('+m.id+')" class="px-3 py-2 text-xs rounded-lg bg-amber-50 text-amber-700"><i class="fas fa-pen"></i> Edit</button><button onclick="hapusMateri('+m.id+')" class="px-3 py-2 text-xs rounded-lg bg-red-50 text-red-600"><i class="fas fa-trash"></i> Hapus</button></div></div><div class="mt-4 text-xs">Pencapaian rata-rata: <b class="text-indigo-600">'+avg+'%</b></div></div>';}).join(''):'<div class="bg-white rounded-xl p-8 text-center text-gray-400 border">Belum ada materi.</div>';};
+
+  function teacherModal(g){var is=g&&g.id;var html='<div id="teacherModal" class="fixed inset-0 z-[80] bg-black/50 flex items-center justify-center p-4"><div class="bg-white rounded-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto p-6"><div class="flex justify-between mb-4"><h3 class="text-xl font-bold">'+(is?'Edit Guru / Wali':'Tambah Guru / Wali')+'</h3><button onclick="document.getElementById(\'teacherModal\').remove()">✕</button></div><input id="tgId" type="hidden" value="'+(g?.id||'')+'"><div class="grid grid-cols-1 md:grid-cols-2 gap-3"><input id="tgNama" class="border rounded-lg p-2" placeholder="Nama lengkap" value="'+escapeHtml(g?.nama||'')+'"><input id="tgJabatan" class="border rounded-lg p-2" placeholder="Jabatan" value="'+escapeHtml(g?.jabatan||'Guru / Wali Kelas')+'"><input id="tgTempat" class="border rounded-lg p-2" placeholder="Tempat lahir" value="'+escapeHtml(g?.tempatLahir||'')+'"><input id="tgTanggal" type="date" class="border rounded-lg p-2" value="'+escapeHtml(g?.tanggalLahir||'')+'"><select id="tgGender" class="border rounded-lg p-2"><option value="">Jenis kelamin</option><option '+(g?.gender==='Laki-laki'?'selected':'')+'>Laki-laki</option><option '+(g?.gender==='Perempuan'?'selected':'')+'>Perempuan</option></select><input id="tgWa" class="border rounded-lg p-2" placeholder="WhatsApp" value="'+escapeHtml(g?.wa||'')+'"><textarea id="tgAlamat" class="border rounded-lg p-2 md:col-span-2" placeholder="Alamat">'+escapeHtml(g?.alamat||'')+'</textarea><div class="md:col-span-2"><label class="text-sm">Foto</label><input id="tgFotoInput" type="file" accept="image/*" class="w-full border rounded-lg p-2"></div></div><div class="flex justify-end gap-2 mt-5"><button onclick="document.getElementById(\'teacherModal\').remove()" class="px-4 py-2 border rounded-lg">Batal</button><button onclick="saveTeacher()" class="px-4 py-2 bg-indigo-600 text-white rounded-lg">Simpan</button></div></div></div>';document.body.insertAdjacentHTML('beforeend',html);}
+  window.openTeacherProfile=function(id){ensureGuruModel();teacherModal(data.guru.find(function(x){return String(x.id)===String(id);})||null);};
+  window.addTeacher=function(){teacherModal(null);};
+  window.saveTeacher=function(){ensureGuruModel();var id=document.getElementById('tgId').value;var g=id?data.guru.find(function(x){return String(x.id)===String(id);}):null;if(!g){g={id:Date.now()};data.guru.push(g);}g.nama=document.getElementById('tgNama').value.trim();if(!g.nama){alert('Nama guru wajib diisi.');return;}g.jabatan=document.getElementById('tgJabatan').value.trim()||'Guru / Wali Kelas';g.tempatLahir=document.getElementById('tgTempat').value.trim();g.tanggalLahir=document.getElementById('tgTanggal').value;g.gender=document.getElementById('tgGender').value;g.wa=document.getElementById('tgWa').value.trim();g.alamat=document.getElementById('tgAlamat').value.trim();var f=document.getElementById('tgFotoInput').files[0];if(f){var r=new FileReader();r.onload=function(e){g.foto=e.target.result;finish();};r.readAsDataURL(f);}else finish();function finish(){(data.kelas||[]).forEach(function(k){if(String(k.waliId)===String(g.id)){k.wali=g.nama;k.guruFoto=g.foto||'';k.guruJabatan=g.jabatan;}});save();document.getElementById('teacherModal').remove();renderGuruProfile();renderKelas();}};
+  window.hapusTeacher=function(id){var g=data.guru.find(function(x){return String(x.id)===String(id);});if(!g||!confirm('Hapus guru '+g.nama+'?'))return;data.kelas.forEach(function(k){if(String(k.waliId)===String(id)){k.waliId='';k.wali='';k.guruFoto='';}});data.guru=data.guru.filter(function(x){return String(x.id)!==String(id);});save();renderGuruProfile();renderKelas();};
+  window.assignTeacherToClass=function(kid,val){var k=getKelasObj(kid),g=data.guru.find(function(x){return String(x.id)===String(val);});if(!k)return;k.waliId=g?g.id:'';k.wali=g?g.nama:'';k.guruFoto=g?g.foto||'':'';k.guruJabatan=g?g.jabatan||'Guru / Wali Kelas':'';save();renderGuruProfile();renderKelas();};
+  window.renderGuruProfile=function(){ensureGuruModel();var host=document.getElementById('guruProfileContent');if(!host)return;var cards=data.guru.map(function(g){var cls=data.kelas.filter(function(k){return String(k.waliId)===String(g.id);});var photo=g.foto?'<img src="'+g.foto+'" class="w-20 h-20 rounded-2xl object-cover border">':'<div class="w-20 h-20 rounded-2xl bg-indigo-50 text-indigo-600 flex items-center justify-center text-2xl"><i class="fas fa-user-tie"></i></div>';return '<div class="bg-white rounded-2xl border shadow-sm p-5"><div class="flex gap-4">'+photo+'<div class="flex-1"><h3 class="font-bold text-lg">'+escapeHtml(g.nama)+'</h3><p class="text-sm text-indigo-600">'+escapeHtml(g.jabatan||'Guru / Wali Kelas')+'</p><p class="text-xs text-gray-500 mt-2">Kelas: '+escapeHtml(cls.map(function(k){return k.nama;}).join(', ')||'Belum ditetapkan')+'</p></div></div><div class="grid grid-cols-2 gap-3 mt-4 text-sm"><div><span class="text-gray-400">WhatsApp</span><b class="block">'+escapeHtml(g.wa||'-')+'</b></div><div><span class="text-gray-400">Jenis Kelamin</span><b class="block">'+escapeHtml(g.gender||'-')+'</b></div></div><div class="flex gap-2 mt-5"><button onclick="openTeacherProfile('+g.id+')" class="flex-1 py-2 border border-indigo-200 text-indigo-700 rounded-xl text-sm"><i class="fas fa-pen"></i> Edit</button><button onclick="hapusTeacher('+g.id+')" class="px-4 py-2 border border-red-200 text-red-600 rounded-xl text-sm"><i class="fas fa-trash"></i></button></div></div>';}).join('');host.innerHTML='<div class="flex justify-between items-center mb-5"><div><h2 class="text-2xl font-bold text-gray-800">Profil Guru & Wali Kelas</h2><p class="text-sm text-gray-500">Kelola data guru yang dapat dipilih sebagai wali kelas.</p></div><button onclick="addTeacher()" class="bg-indigo-600 text-white px-4 py-2 rounded-xl"><i class="fas fa-user-plus mr-1"></i> Tambah Guru / Wali</button></div><div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5">'+cards+'</div>'+(data.guru.length?'':'<div class="bg-white border rounded-xl p-8 text-center text-gray-400">Belum ada guru. Klik Tambah Guru / Wali.</div>');};
+  var oldRenderKelas=renderKelas;window.renderKelas=function(){oldRenderKelas();ensureGuruModel();document.querySelectorAll('[data-class-teacher]').forEach(function(el){var kid=el.getAttribute('data-class-teacher');el.innerHTML='<option value="">Pilih Guru / Wali</option>'+data.guru.map(function(g){var sel=String(getKelasObj(kid)?.waliId)===String(g.id)?' selected':'';return '<option value="'+g.id+'"'+sel+'>'+escapeHtml(g.nama)+'</option>';}).join('');});};
+  setTimeout(function(){ensureGuruModel();renderSiswa();renderMateri();renderGuruProfile();},300);
+})();
+</script>
+
+
+<script>
+/* ===== FIX FINAL MENU KELAS =====
+   Override lama menyebabkan ReferenceError sehingga seluruh daftar kelas kosong.
+   Versi ini tidak bergantung pada fungsi lokal dari script lain.
+*/
+(function () {
+  window.renderKelas = function () {
+    var container = document.getElementById('kelasList');
+    if (!container) return;
+
+    if (!Array.isArray(data.kelas)) data.kelas = [];
+    if (!Array.isArray(data.guru)) data.guru = [];
+
+    // Jika data kelas kosong, tampilkan keadaan kosong yang jelas.
+    if (data.kelas.length === 0) {
+      container.innerHTML =
+        '<div class="md:col-span-2 xl:col-span-3 bg-white rounded-xl border p-10 text-center">' +
+          '<i class="fas fa-school text-4xl text-gray-300 mb-3"></i>' +
+          '<h3 class="font-semibold text-gray-700">Belum ada kelas</h3>' +
+          '<p class="text-sm text-gray-400 mt-1">Klik tombol Tambah Kelas untuk membuat kelas baru.</p>' +
+        '</div>';
+      return;
+    }
+
+    var list = data.kelas.slice().sort(function (a, b) {
+      return String(a.nama || '').localeCompare(String(b.nama || ''), 'id', {sensitivity:'base'});
+    });
+
+    container.innerHTML = list.map(function (k) {
+      var jumlah = (data.siswa || []).filter(function (s) {
+        return String(s.kelasId) === String(k.id);
+      }).length;
+
+      var wali = k.wali || 'Belum ditentukan';
+      var guruOptions =
+        '<option value="">Pilih Guru / Wali</option>' +
+        data.guru.map(function (g) {
+          var selected = String(k.waliId || '') === String(g.id) ? ' selected' : '';
+          return '<option value="' + String(g.id).replace(/"/g, '&quot;') + '"' + selected + '>' +
+            escapeHtml(g.nama || '-') + '</option>';
+        }).join('');
+
+      var foto = k.guruFoto
+        ? '<img src="' + k.guruFoto + '" class="w-14 h-14 rounded-xl object-cover border" alt="Foto wali">'
+        : '<div class="w-14 h-14 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center text-xl"><i class="fas fa-school"></i></div>';
+
+      return '' +
+        '<div class="bg-white rounded-xl shadow-sm border p-5 hover:shadow-md transition">' +
+          '<div class="flex items-start gap-3">' +
+            foto +
+            '<div class="flex-1 min-w-0">' +
+              '<h3 class="font-bold text-lg text-gray-800">' + escapeHtml(k.nama || 'Tanpa Nama') + '</h3>' +
+              '<p class="text-sm text-gray-500 mt-1"><i class="fas fa-users text-indigo-500 mr-1"></i>' + jumlah + ' siswa</p>' +
+              '<p class="text-sm text-gray-500 mt-1"><i class="fas fa-user-tie text-indigo-500 mr-1"></i>' + escapeHtml(wali) + '</p>' +
+            '</div>' +
+          '</div>' +
+
+          '<label class="block text-xs text-gray-500 mt-4 mb-1">Wali Kelas</label>' +
+          '<select onchange="assignTeacherToClass(\'' + String(k.id).replace(/'/g, "\'") + '\', this.value)" ' +
+            'class="w-full border rounded-lg px-3 py-2 text-sm bg-white">' +
+            guruOptions +
+          '</select>' +
+
+          '<div class="grid grid-cols-3 gap-2 mt-4 pt-4 border-t">' +
+            '<button onclick="lihatDetailKelas(\'' + String(k.id).replace(/'/g, "\'") + '\')" class="py-2 text-sm rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-50"><i class="fas fa-eye"></i> Detail</button>' +
+            '<button onclick="editKelas(\'' + String(k.id).replace(/'/g, "\'") + '\')" class="py-2 text-sm rounded-lg border border-indigo-200 text-indigo-600 hover:bg-indigo-50"><i class="fas fa-edit"></i> Edit</button>' +
+            '<button onclick="hapusKelas(\'' + String(k.id).replace(/'/g, "\'") + '\')" class="py-2 text-sm rounded-lg border border-red-200 text-red-600 hover:bg-red-50"><i class="fas fa-trash"></i> Hapus</button>' +
+          '</div>' +
+        '</div>';
+    }).join('');
+  };
+
+  // Jalankan setelah seluruh halaman selesai dimuat.
+  setTimeout(function () {
+    try {
+      window.renderKelas();
+    } catch (err) {
+      console.error('Gagal merender menu kelas:', err);
+    }
+  }, 500);
+})();
+</script>
+
 </body>
 </html>
